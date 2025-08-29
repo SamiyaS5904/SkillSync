@@ -162,6 +162,7 @@ def jobs():
     jobs = scrape_jobs("python developer")
     return render_template("jobs.html", jobs=jobs)
 
+
 @app.route("/roadmap")
 def roadmap():
     roadmap_steps = [
@@ -174,6 +175,7 @@ def roadmap():
     return render_template("roadmap.html", roadmap=roadmap_steps)
 
 
+# ============ MAIN ==============
 if __name__ == "__main__":
     print("🚀 SkillSync Agent running at http://127.0.0.1:5000")
     app.run(debug=True)
