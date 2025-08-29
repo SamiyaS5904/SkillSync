@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{{ title if title else "SkillSync" }}</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
+  <style>
+    body { background: #f8f9fa; }
+    .navbar { background: #343a40; }
+    .navbar a { color: white !important; }
+    footer { background: #343a40; color: white; padding: 10px; text-align: center; margin-top: 40px; }
+  </style>
+</head>
+<body>
+
+  <!-- Navbar -->
+  <nav class="navbar navbar-expand-lg navbar-dark">
+    <div class="container">
+      <a class="navbar-brand" href="/">SkillSync</a>
+      <div>
+        <a class="nav-link d-inline" href="/">Home</a>
+        <a class="nav-link d-inline" href="/playlists">Playlists</a>
+        <a class="nav-link d-inline" href="/agent">Roadmap</a>
+        <a class="nav-link d-inline" href="/jobs">Jobs</a>
+      </div>
+    </div>
+  </nav>
+
+  <!-- Content -->
+  <div class="container mt-4">
+    {% block content %}{% endblock %}
+  </div>
+
+  <footer>
+    <p>© 2024 SkillSync | Learn Smarter 🚀</p>
+  </footer>
+</body>
+</html>

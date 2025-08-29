@@ -1,0 +1,68 @@
+/* Smooth scroll for entire app */
+html {
+  scroll-behavior: smooth;
+}
+
+/* Navbar hover underline effect */
+nav a {
+  position: relative;
+  transition: color 0.3s ease;
+}
+nav a::after {
+  content: "";
+  position: absolute;
+  width: 0;
+  height: 2px;
+  left: 0;
+  bottom: -2px;
+  background: #4f46e5; /* Indigo-600 */
+  transition: width 0.3s ease;
+}
+nav a:hover::after {
+  width: 100%;
+}
+
+/* Card hover effect */
+.card-hover {
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+.card-hover:hover {
+  transform: translateY(-6px) scale(1.02);
+  box-shadow: 0 12px 20px rgba(0, 0, 0, 0.1);
+}
+
+/* Button glow effect */
+.btn-glow {
+  position: relative;
+  transition: all 0.3s ease-in-out;
+}
+.btn-glow:hover {
+  box-shadow: 0 0 20px rgba(79, 70, 229, 0.6);
+}
+
+/* Glassmorphism cards */
+.glass {
+  background: rgba(255, 255, 255, 0.6);
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  border-radius: 16px;
+}
+
+/* Fade-in animation */
+.fade-in {
+  opacity: 0;
+  transform: translateY(20px);
+  animation: fadeIn 0.8s ease forwards;
+}
+@keyframes fadeIn {
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Hero text gradient */
+.hero-gradient {
+  background: linear-gradient(90deg, #4f46e5, #9333ea);
+  -webkit-text-fill-color: transparent;
+}

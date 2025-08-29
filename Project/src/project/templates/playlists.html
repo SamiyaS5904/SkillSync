@@ -1,0 +1,19 @@
+{% extends "base.html" %}
+{% block content %}
+
+<h2 class="mb-4 text-center">🎥 Top Playlists</h2>
+<div class="row">
+  {% for p in playlists %}
+    <div class="col-md-4">
+      <div class="card mb-4 border-0 shadow-lg rounded-3">
+        <div class="card-body">
+          <h5 class="card-title fw-bold text-primary">{{ p.name }}</h5>
+          <p class="text-muted">Language: <span class="fw-semibold">{{ p.language }}</span></p>
+          <p>⭐ <span class="fw-bold">{{ p.rating }}</span> / 5</p>
+          <a href="{{ p.url }}" class="btn btn-sm btn-outline-primary" target="_blank">▶ Watch</a>
+        </div>
+      </div>
+    </div>
+  {% endfor %}
+</div>
+{% endblock %}

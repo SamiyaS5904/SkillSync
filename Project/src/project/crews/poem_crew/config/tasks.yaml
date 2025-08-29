@@ -1,7 +1,83 @@
-write_poem:
-  description: >
-    Write a poem about how CrewAI is awesome.
-    Ensure the poem is engaging and adheres to the specified sentence count of {sentence_count}.
-  expected_output: >
-    A beautifully crafted poem about CrewAI, with exactly {sentence_count} sentences.
-  agent: poem_writer
+tasks:
+  - name: User Onboarding & Profile Analysis
+    description: >
+      Collect user details (name, education, skills, interests, career goal)
+      and analyze strengths and weaknesses.
+    agent: Career Analyst
+    expected_input: >
+      JSON with user profile including name, education, current skills, career goals.
+    expected_output: >
+      Structured profile with identified strengths, weaknesses, and goal statement.
+    dependencies: []
+
+  - name: Skill Gap Detection
+    description: >
+      Compare the user’s current skills with the target role requirements,
+      and identify gaps in technical and soft skills.
+    agent: Career Analyst
+    expected_input: >
+      User profile JSON + target role.
+    expected_output: >
+      JSON with skill_core, skill_optional, skill_gaps.
+    dependencies:
+      - User Onboarding & Profile Analysis
+
+  - name: Roadmap Creation
+    description: >
+      Generate a step-by-step learning roadmap with skills, resources, and
+      estimated completion time per milestone.
+    agent: Skill Roadmap Planner
+    expected_input: >
+      JSON with skill_core, skill_optional, skill_gaps.
+    expected_output: >
+      JSON with roadmap_steps: [{skill, resources, estimated_time}].
+    dependencies:
+      - Skill Gap Detection
+
+  - name: Progress Monitoring
+    description: >
+      Track user’s daily/weekly completed tasks, generate progress reports,
+      and flag areas needing improvement.
+    agent: Progress Tracker
+    expected_input: >
+      JSON with roadmap progress (completed_tasks, pending_tasks, timeline).
+    expected_output: >
+      Progress report JSON with completion %, blockers, and recommendations.
+    dependencies:
+      - Roadmap Creation
+
+  - name: Resume & Portfolio Enhancement
+    description: >
+      Review the user’s resume/LinkedIn/portfolio and suggest improvements
+      aligned with identified skills and career goals.
+    agent: Resume & Portfolio Expert
+    expected_input: >
+      User resume text + LinkedIn URL + portfolio details.
+    expected_output: >
+      Updated resume draft + LinkedIn suggestions + portfolio checklist.
+    dependencies:
+      - Progress Monitoring
+
+  - name: Job Search & Recommendations
+    description: >
+      Match user current skills and progress to jobs in the dataset,
+      highlighting skill matches and gaps.
+    agent: Job Recommendation Agent
+    expected_input: >
+      JSON with completed skills, target role, and resume details.
+    expected_output: >
+      JSON with job_matches: [{title, company, matched_skills, missing_skills}].
+    dependencies:
+      - Resume & Portfolio Enhancement
+
+  - name: Motivation & Feedback Cycle
+    description: >
+      Send motivational updates, celebrate completed milestones,
+      and encourage consistent learning.
+    agent: Motivational Coach
+    expected_input: >
+      Progress report JSON with milestones and completion %.
+    expected_output: >
+      Motivational message string + optional notification payload.
+    dependencies:
+      - Progress Monitoring

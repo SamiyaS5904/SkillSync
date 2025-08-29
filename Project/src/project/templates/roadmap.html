@@ -1,0 +1,17 @@
+{% extends "base.html" %}
+{% block content %}
+
+<h2 class="mb-4 text-center">📌 Roadmap</h2>
+<div class="card shadow-lg border-0 rounded-3">
+  <div class="card-body">
+    <ol class="list-group list-group-numbered">
+      {% for step in steps %}
+        <li class="list-group-item d-flex align-items-center">
+          <span class="badge bg-success me-3">Step {{ loop.index }}</span>
+          <span class="fw-semibold">{{ step }}</span>
+        </li>
+      {% endfor %}
+    </ol>
+  </div>
+</div>
+{% endblock %}
