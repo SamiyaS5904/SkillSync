@@ -1,56 +1,95 @@
-# {{crew_name}} Crew
+# 📘 SkillSync – AI-Powered Career Guidance Platform
 
-Welcome to the {{crew_name}} Crew project, powered by [crewAI](https://crewai.com). This template is designed to help you set up a multi-agent AI system with ease, leveraging the powerful and flexible framework provided by crewAI. Our goal is to enable your agents to collaborate effectively on complex tasks, maximizing their collective intelligence and capabilities.
+## 📖 Project Overview
 
-## Installation
+SkillSync is a **Software as a Service (SaaS) platform** designed to provide students and learners with a **personalized career roadmap**. The system is powered by **AI agents** that work collaboratively to help users define career goals, build skill roadmaps, manage tasks, stay motivated, and discover job opportunities.
 
-Ensure you have Python >=3.10 <3.14 installed on your system. This project uses [UV](https://docs.astral.sh/uv/) for dependency management and package handling, offering a seamless setup and execution experience.
+This project integrates **multi-agent collaboration** where five specialized agents interact with each other in a dependent, step-by-step workflow to deliver a seamless experience for the user. It serves as an **AI-driven career companion** that simplifies the process of moving from *goal-setting* to *career achievement*.
 
-First, if you haven't already, install uv:
+---
 
-```bash
-pip install uv
+## 🤖 Multi-Agent System Architecture
+
+The platform is built upon **five core AI agents**, each with a specialized role. These agents are interdependent and communicate with each other to ensure continuity of the process:
+
+1. **🎯 Goal Interpreter**
+
+   * Takes user input (career goal) and analyzes it.
+   * Breaks the goal into required **skills, technologies, and tools**.
+   * Acts as the **foundation agent** for the system.
+
+2. **🛤 Roadmap Builder**
+
+   * Uses the interpreted goals to design a **step-by-step learning roadmap**.
+   * Organizes resources from beginner to advanced levels.
+   * Ensures that the learning path is logical and achievable.
+
+3. **📅 Task Planner**
+
+   * Converts the roadmap into **daily/weekly actionable tasks**.
+   * Helps the student manage time effectively.
+   * Supports productivity and progress tracking.
+
+4. **💡 Motivation Coach**
+
+   * Provides **encouragement, productivity tips, and mindset support**.
+   * Ensures students remain consistent and avoid procrastination.
+   * Strengthens engagement during the learning journey.
+
+5. **💼 Job Matcher**
+
+   * Matches acquired skills with **relevant job roles and internships**.
+   * Provides insights into **market trends and hiring demands**.
+   * Bridges the gap between learning and employment.
+
+---
+
+## 🌐 Key Features
+
+* AI-powered personalized career guidance.
+* **Five dependent agents** working in harmony.
+* Interactive and intuitive **front-end built with HTML, CSS, and JavaScript**.
+* Supports **progressive learning, time management, and motivation**.
+* **Job-role recommendations** aligned with student skills.
+* SaaS model – scalable for wide usage by students and institutions.
+
+---
+
+## 🛠️ Technology Stack
+
+* **Backend:** Python, LangChain, CrewAI, OpenAI GPT Models
+* **Frontend:** HTML, CSS, JavaScript (already developed)
+* **Tools:** SerperDevTool (for real-time insights), Pydantic (data validation)
+
+---
+
+## 📂 Project Structure
+
+```
+SkillSync/
+│
+├── src/project/
+│   ├── main.py        # Entry point for execution
+│   ├── loader.py      # AI agent definitions and orchestration
+│   ├── index.html     # Frontend UI (HTML, CSS, JS)
+│   └── ...
+│
+├── .venv/             # Virtual environment
+├── requirements.txt   # Project dependencies
+└── README.md          # Documentation
 ```
 
-Next, navigate to your project directory and install the dependencies:
+---
 
-(Optional) Lock the dependencies and install them by using the CLI command:
-```bash
-crewai install
-```
+## 📈 Future Enhancements
 
-### Customizing
+* Integration with **real-world job APIs** for advanced matching.
+* Dashboard for **progress tracking and analytics**.
+* Deployment on cloud platforms (AWS, Render, Vercel).
+* Multi-language support for diverse student communities.
 
-**Add your `OPENAI_API_KEY` into the `.env` file**
+---
 
-- Modify `src/project/config/agents.yaml` to define your agents
-- Modify `src/project/config/tasks.yaml` to define your tasks
-- Modify `src/project/crew.py` to add your own logic, tools and specific args
-- Modify `src/project/main.py` to add custom inputs for your agents and tasks
+## 🎯 Conclusion
 
-## Running the Project
-
-To kickstart your flow and begin execution, run this from the root folder of your project:
-
-```bash
-crewai run
-```
-
-This command initializes the Project Flow as defined in your configuration.
-
-This example, unmodified, will run the create a `report.md` file with the output of a research on LLMs in the root folder.
-
-## Understanding Your Crew
-
-The Project Crew is composed of multiple AI agents, each with unique roles, goals, and tools. These agents collaborate on a series of tasks, defined in `config/tasks.yaml`, leveraging their collective skills to achieve complex objectives. The `config/agents.yaml` file outlines the capabilities and configurations of each agent in your crew.
-
-## Support
-
-For support, questions, or feedback regarding the {{crew_name}} Crew or crewAI.
-
-- Visit our [documentation](https://docs.crewai.com)
-- Reach out to us through our [GitHub repository](https://github.com/joaomdmoura/crewai)
-- [Join our Discord](https://discord.com/invite/X4JWnZnxPb)
-- [Chat with our docs](https://chatg.pt/DWjSBZn)
-
-Let's create wonders together with the power and simplicity of crewAI.
+SkillSync is a **comprehensive SaaS solution** that bridges the gap between **learning and career success**. By combining **multi-agent AI intelligence** with a **student-friendly interface**, it ensures that learners receive end-to-end support – from defining career aspirations to achieving their professional goals.

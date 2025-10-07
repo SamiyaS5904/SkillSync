@@ -1,16 +1,85 @@
-{% extends "base.html" %}
-{% block content %}
-<h2 class="mb-4 text-center">💼 Latest Jobs</h2>
-<div class="list-group shadow-lg rounded">
-  {% for job in jobs %}
-    <a href="{{ job.link if job.link else '#' }}" target="_blank"
-       class="list-group-item list-group-item-action d-flex justify-content-between align-items-center">
-      <div>
-        <h5 class="mb-1 fw-bold text-dark">{{ job.title }}</h5>
-        <small class="text-muted">at {{ job.company }}</small>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Jobs - SkillSync</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="min-h-screen bg-gray-900 text-white flex flex-col">
+
+  <!-- Navbar -->
+  <nav class="fixed top-0 w-full z-50 bg-white/10 backdrop-blur-xl border-b border-white/20">
+    <div class="max-w-7xl mx-auto px-6 flex items-center justify-between h-16">
+      <a href="/" class="text-2xl font-bold bg-gradient-to-r from-indigo-400 to-purple-500 bg-clip-text text-transparent">SkillSync</a>
+      <div class="hidden md:flex space-x-6 text-gray-300">
+        <a href="/" class="hover:text-yellow-400">Home</a>
+        <a href="/resources.html" class="hover:text-yellow-400">Resources</a>
+        <a href="/agents.html" class="hover:text-yellow-400">Agents</a>
+        <a href="/career-paths.html" class="hover:text-yellow-400">Career Paths</a>
+        <a href="/jobs.html" class="text-yellow-400">Jobs</a>
       </div>
-      <span class="badge bg-primary rounded-pill">Apply</span>
-    </a>
-  {% endfor %}
-</div>
-{% endblock %}
+    </div>
+  </nav>
+
+  <!-- Main -->
+  <main class="flex-1 px-6 pt-24 pb-12 max-w-6xl mx-auto">
+    <h1 class="text-3xl font-bold text-center mb-8">Job Opportunities 💼</h1>
+    <p class="text-center text-gray-400 mb-6">Explore jobs aligned with your skills and career goals</p>
+
+    <!-- Filters -->
+    <div class="flex flex-wrap justify-center gap-4 mb-10">
+      <select class="p-3 rounded-xl bg-gray-800 border border-gray-700 text-white">
+        <option>All Roles</option>
+        <option>Frontend Developer</option>
+        <option>Backend Developer</option>
+        <option>Data Scientist</option>
+        <option>AI Engineer</option>
+      </select>
+      <select class="p-3 rounded-xl bg-gray-800 border border-gray-700 text-white">
+        <option>All Locations</option>
+        <option>Remote</option>
+        <option>India</option>
+        <option>US</option>
+        <option>Europe</option>
+      </select>
+      <select class="p-3 rounded-xl bg-gray-800 border border-gray-700 text-white">
+        <option>All Experience</option>
+        <option>Internship</option>
+        <option>Junior</option>
+        <option>Mid-Level</option>
+        <option>Senior</option>
+      </select>
+    </div>
+
+    <!-- Job Listings -->
+    <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
+      <!-- Job Card -->
+      <div class="p-6 rounded-2xl bg-white/10 backdrop-blur-lg border border-white/20 hover:border-yellow-400 transition">
+        <h2 class="text-xl font-semibold text-indigo-400">Frontend Developer</h2>
+        <p class="text-gray-300 mt-2">React.js, TailwindCSS, API integration</p>
+        <p class="text-gray-400 text-sm mt-2">Remote · Full-Time</p>
+        <a href="#" class="inline-block mt-4 px-4 py-2 rounded-full bg-gradient-to-r from-indigo-500 to-purple-500 hover:scale-105 transition">Apply Now</a>
+      </div>
+
+      <div class="p-6 rounded-2xl bg-white/10 backdrop-blur-lg border border-white/20 hover:border-yellow-400 transition">
+        <h2 class="text-xl font-semibold text-indigo-400">Data Scientist</h2>
+        <p class="text-gray-300 mt-2">Python, Machine Learning, SQL</p>
+        <p class="text-gray-400 text-sm mt-2">Bangalore · Hybrid</p>
+        <a href="#" class="inline-block mt-4 px-4 py-2 rounded-full bg-gradient-to-r from-indigo-500 to-purple-500 hover:scale-105 transition">Apply Now</a>
+      </div>
+
+      <div class="p-6 rounded-2xl bg-white/10 backdrop-blur-lg border border-white/20 hover:border-yellow-400 transition">
+        <h2 class="text-xl font-semibold text-indigo-400">Backend Developer</h2>
+        <p class="text-gray-300 mt-2">Node.js, MongoDB, AWS</p>
+        <p class="text-gray-400 text-sm mt-2">US · Remote</p>
+        <a href="#" class="inline-block mt-4 px-4 py-2 rounded-full bg-gradient-to-r from-indigo-500 to-purple-500 hover:scale-105 transition">Apply Now</a>
+      </div>
+    </div>
+  </main>
+
+  <footer class="bg-white/5 backdrop-blur-xl border-t border-white/20 text-center py-4 text-gray-400 text-sm">
+    © 2025 SkillSync. All rights reserved.
+  </footer>
+</body>
+</html>

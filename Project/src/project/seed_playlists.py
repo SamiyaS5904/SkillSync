@@ -1,19 +1,39 @@
+# seed_playlists.py
 from mongodb_helper import MongoDBHelper
 
-# connect
 db = MongoDBHelper()
 db.select_db("SkillSyncDB", "playlists")
 
-# sample playlists
-sample_playlists = [
-    {"title": "Python Basics (English)", "language": "English", "rating": 4.8,
-     "url": "https://youtube.com/playlist?list=PLPythonBasics"},
-    {"title": "DSA in Hindi", "language": "Hindi", "rating": 4.7,
-     "url": "https://youtube.com/playlist?list=PLDSAHindi"},
-    {"title": "Machine Learning Crash Course", "language": "English", "rating": 4.9,
-     "url": "https://youtube.com/playlist?list=PLMLCrash"}
+demo_playlists = [
+    {
+        "title": "JavaScript Full Course - Hitesh Choudhary",
+        "url": "https://www.youtube.com/playlist?list=PLRAV69dS1uWRX9uEfbd5x1pS14Ck3ab9l",
+        "language": "Hindi",
+        "rating": 4.9,
+        "creator": "Hitesh Choudhary"
+    },
+    {
+        "title": "React.js for Beginners - Chai aur Code",
+        "url": "https://www.youtube.com/playlist?list=PLRAV69dS1uWSxP6FPzZ8t4Y_MYEQZ5r3x",
+        "language": "Hindi",
+        "rating": 4.8,
+        "creator": "Chai aur Code"
+    },
+    {
+        "title": "Data Structures & Algorithms - Love Babbar",
+        "url": "https://www.youtube.com/playlist?list=PLDzeHZWIZsTryvtXdMr6rPh4IDexB5NIA",
+        "language": "Hindi",
+        "rating": 4.9,
+        "creator": "Love Babbar"
+    },
+    {
+        "title": "Python Roadmap - Code with Harry",
+        "url": "https://www.youtube.com/playlist?list=PLu0W_9lII9agICnT8t4iYVSZ3eykIAOME",
+        "language": "Hindi",
+        "rating": 4.7,
+        "creator": "Code with Harry"
+    }
 ]
 
-# insert into collection
-db.collection.insert_many(sample_playlists)
-print("✅ Sample playlists inserted")
+db.collection.insert_many(demo_playlists)
+print("✅ Demo playlists inserted successfully!")

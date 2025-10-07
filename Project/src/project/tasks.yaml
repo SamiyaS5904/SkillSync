@@ -1,0 +1,72 @@
+tasks:
+  - id: career_path_task
+    description: >
+      Analyze the user’s career goal (e.g., “I want to become an AI Engineer”).
+      Suggest realistic career paths, required skills, certifications, and a motivational message.
+      Output should always be **structured JSON + clear Markdown notes**.
+    expected_output: >
+      JSON:
+      {
+        "career_paths": [ "path 1", "path 2" ],
+        "required_skills": [ "skill1", "skill2" ],
+        "certifications": [ "cert1", "cert2" ],
+        "motivational_message": "short inspiring note"
+      }
+    agent: career_guide
+
+  - id: roadmap_task
+    description: >
+      Based on the chosen career and user constraints (hours per day, total months),
+      generate a **detailed learning roadmap** with milestones, weekly goals,
+      project ideas, and a timeline overview.
+      Output must be structured and in **Markdown**.
+    expected_output: >
+      JSON:
+      {
+        "milestones": [{ "title": "", "duration_weeks": 0, "description": "" }],
+        "weekly_goals": [ "goal1", "goal2" ],
+        "projects": [ "project idea 1", "project idea 2" ],
+        "timeline_overview": "short summary"
+      }
+    agent: learning_coach
+
+  - id: playlist_task
+    description: >
+      For each skill in the roadmap, recommend curated learning resources
+      (e.g., YouTube, MOOCs, GitHub repos, blogs, books).
+      Each resource should have a clear title, type, link, and short description.
+    expected_output: >
+      JSON:
+      {
+        "resources": [
+          { "skill": "Python", "title": "Python for Everybody", "type": "Course", "link": "URL", "short_description": "Beginner-friendly" }
+        ]
+      }
+    agent: learning_coach
+
+  - id: job_search_task
+    description: >
+      Recommend job listings (scraped or mocked if needed) that match the user’s
+      roadmap skills. Highlight missing skills for each role. Output should be
+      **Markdown with clear headings and JSON structure**.
+    expected_output: >
+      JSON:
+      {
+        "jobs": [
+          { "title": "", "company": "", "location": "", "link": "", "missing_skills": [] }
+        ]
+      }
+    agent: job_advisor
+
+  - id: interview_task
+    description: >
+      Generate mock interview questions for the user’s chosen career path.
+      Cover multiple difficulty levels (Easy, Medium, Hard). Format clearly in **Markdown**.
+    expected_output: >
+      JSON:
+      {
+        "questions": [
+          { "question": "What is overfitting?", "difficulty_level": "Easy" }
+        ]
+      }
+    agent: job_advisor

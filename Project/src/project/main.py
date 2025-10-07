@@ -1,181 +1,265 @@
-from flask import Flask, render_template, request, jsonify
-import speech_recognition as sr
-from pytube import Playlist, YouTube
-import requests, uuid
-from bs4 import BeautifulSoup
+from flask import Flask, render_template, request, redirect, url_for, session, jsonify, flash
+from datetime import datetime
+from dotenv import load_dotenv
+from werkzeug.security import generate_password_hash, check_password_hash
+import os
+import json
 
-# 🗄️ MongoDB Helper
-from mongodb_helper import MongoDBHelper  
+# MongoDB helper
+from mongodb_helper import MongoDBHelper
+# Crew orchestrator
+from loader import SkillSyncCrew
 
-app = Flask(__name__, template_folder="templates", static_folder="static")
+# Load env
+load_dotenv()
 
-# 🔌 Connect to DB once
-db_helper = MongoDBHelper()
+# Flask app
+app = Flask(__name__)
+app.secret_key = os.getenv("SECRET_KEY", "super_secret_key")
+
+# MongoDB setup
+mongo = MongoDBHelper()
+mongo.select_db(db_name="SkillSyncDB", collection="users")
+
+# Initialize crew once
+crew = SkillSyncCrew()
 
 
-# ============ 🧠 AGENT CORE ==============
-def skill_sync_agent(user_input):
-    """
-    Decide what user wants: roadmap, playlists, jobs, etc.
-    """
-    user_input = user_input.lower()
+# -------- Helper: calculate progress --------
+def calculate_progress(roadmap):
+    if not roadmap or "milestones" not in roadmap:
+        return 0, []
+    milestone_progress = []
+    total_tasks = 0
+    completed_tasks = 0
+    for m in roadmap["milestones"]:
+        m_tasks = m.get("tasks", [])
+        m_completed = sum(1 for t in m_tasks if t.get("done"))
+        m_total = len(m_tasks)
+        percent = int((m_completed / m_total) * 100) if m_total else 0
+        milestone_progress.append(percent)
+        total_tasks += m_total
+        completed_tasks += m_completed
+    overall_progress = int((completed_tasks / total_tasks) * 100) if total_tasks else 0
+    return overall_progress, milestone_progress
 
-    # 1️⃣ Roadmap request
-    if "roadmap" in user_input or "goal" in user_input:
-        db_helper.select_db("SkillSyncDB", "roadmaps")
-        roadmap = db_helper.collection.find_one({"name": "fullstack"})  # Example roadmap
-        return {
-            "type": "roadmap",
-            "message": "Here’s a suggested roadmap 🚀",
-            "steps": roadmap["steps"] if roadmap else ["No roadmap found"]
+
+# -------- Landing Page --------
+@app.route("/")
+def home():
+    return render_template("index_3.html")
+
+
+# -------- Authentication --------
+@app.route("/login", methods=["POST"])
+def login():
+    email, password = request.form.get("email"), request.form.get("password")
+    user = mongo.collection.find_one({"email": email})
+    if user and check_password_hash(user["password"], password):
+        session["user"] = user["email"]
+        return redirect(url_for("dashboard"))
+    flash("Invalid credentials", "error")
+    return redirect(url_for("home"))
+
+
+@app.route("/signup", methods=["POST"])
+def signup():
+    name = request.form.get("name")
+    email = request.form.get("email")
+    password = request.form.get("password")
+    confirm = request.form.get("confirm_password")
+    if not all([name, email, password, confirm]) or password != confirm:
+        flash("Invalid signup form", "error")
+        return redirect(url_for("home"))
+    if mongo.collection.find_one({"email": email}):
+        flash("User already exists", "error")
+        return redirect(url_for("home"))
+    hashed_pw = generate_password_hash(password)
+    mongo.insert_document({
+        "name": name,
+        "email": email,
+        "password": hashed_pw,
+        "created_at": datetime.utcnow(),
+        "streak_days": 1,
+        "goal": None,
+        "roadmap": None,
+        "conversations": []
+    })
+    flash("Signup successful!", "success")
+    return redirect(url_for("home"))
+
+
+@app.route("/logout")
+def logout():
+    session.pop("user", None)
+    return redirect(url_for("home"))
+
+
+# -------- Dashboard --------
+@app.route("/dashboard")
+def dashboard():
+    if "user" not in session:
+        return redirect(url_for("home"))
+    user_doc = mongo.collection.find_one({"email": session["user"]})
+    if not user_doc:
+        return redirect(url_for("home"))
+    overall_progress, milestone_progress = calculate_progress(user_doc.get("roadmap"))
+    return render_template("dashboard.html", user=user_doc,
+                           overall_progress=overall_progress,
+                           milestone_progress=milestone_progress)
+
+
+# -------- AI Assistant Endpoint --------
+@app.route("/agent/auto", methods=["POST"])
+def agent_auto():
+    if "user" not in session:
+        return jsonify({"error": "Unauthorized"}), 401
+    data = request.get_json(force=True)
+    query = data.get("query", "")
+    try:
+        result = crew.run_quick(query)
+        response = {
+            "agent": result.get("agent", "career"),
+            "response": result.get("response", str(result))
         }
-
-    # 2️⃣ Playlist request
-    if "playlist" in user_input or "video" in user_input:
-        lang = "Hindi" if "hindi" in user_input else "English"
-        db_helper.select_db("SkillSyncDB", "playlists")
-        playlists = list(db_helper.collection.find({"language": lang}).sort("rating", -1).limit(3))
-        return {
-            "type": "playlist",
-            "message": f"Top {lang} playlists for you 🎥",
-            "playlists": playlists
-        }
-
-    # 3️⃣ Jobs request
-    if "job" in user_input or "internship" in user_input:
-        jobs = scrape_jobs("python developer")  
-        return {
-            "type": "jobs",
-            "message": "Here are some fresh job opportunities 💼",
-            "jobs": jobs
-        }
-
-    # Default fallback
-    return {
-        "type": "chat",
-        "message": f"I understood: {user_input}. I’ll improve to assist you better 🙌"
-    }
+        mongo.collection.update_one(
+            {"email": session["user"]},
+            {"$push": {"conversations": {"query": query, "response": response, "ts": datetime.utcnow()}}}
+        )
+        return jsonify(response)
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 
 
-# ============ 🎤 VOICE INPUT ROUTE ==============
-@app.route("/voice-input", methods=["POST"])
-def voice_input():
-    recognizer = sr.Recognizer()
-    audio_file = request.files["audio"]
-
-    with sr.AudioFile(audio_file) as source:
-        audio = recognizer.record(source)
-        try:
-            text = recognizer.recognize_google(audio)
-            agent_response = skill_sync_agent(text)
-
-            # Save chat in DB
-            db_helper.select_db("SkillSyncDB", "chat_history")
-            session_id = str(uuid.uuid4())
-            db_helper.insert_chat(session_id, "user", text)
-            db_helper.insert_chat(session_id, "agent", str(agent_response))
-
-            return jsonify({"input": text, "response": agent_response})
-        except sr.UnknownValueError:
-            return jsonify({"error": "Could not understand audio"}), 400
-        except sr.RequestError:
-            return jsonify({"error": "Speech service not available"}), 500
+# -------- Roadmap Orchestrator (full multi-month) --------
+@app.route("/orchestrate", methods=["POST"])
+def orchestrate():
+    if "user" not in session:
+        return jsonify({"error": "Unauthorized"}), 401
+    data = request.get_json(force=True)
+    goal = data.get("goal")
+    skills = data.get("skills", [])
+    hours = int(data.get("hours", 2))
+    duration = int(data.get("duration_months", 3))
+    weekends = bool(data.get("weekends", True))
+    try:
+        result = crew.orchestrate(goal, skills, hours, duration, weekends)
+        mongo.collection.update_one(
+            {"email": session["user"]},
+            {"$set": {"goal": goal, "roadmap": result},
+             "$push": {"conversations": {"input": data, "response": result, "ts": datetime.utcnow()}}}
+        )
+        return jsonify(result)
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 
 
-# ============ 📺 GENERATE STUDY PLAN ==============
-@app.route("/generate-plan", methods=["POST"])
-def generate_plan():
-    data = request.json
-    playlist_url = data.get("playlist_url")
-    daily_time = int(data.get("daily_time"))  # minutes
+# -------- Roadmap Generator for Dashboard (AJAX) --------
+@app.route("/api/generate-roadmap", methods=["POST"])
+def api_generate_roadmap():
+    if "user" not in session:
+        return jsonify({"error": "Unauthorized"}), 401
+    data = request.get_json(force=True)
+    onboarding = data.get("onboarding", {})
 
     try:
-        videos = []
-        if "playlist" in playlist_url.lower():
-            playlist = Playlist(playlist_url)
-            playlist._video_regex = r"\"url\":\"(/watch\?v=[\w-]*)"
-            for url in playlist.video_urls:
-                try:
-                    yt = YouTube(url)
-                    videos.append((yt.title, yt.length // 60))
-                except Exception:
-                    continue
-        else:
-            yt = YouTube(playlist_url)
-            videos.append((yt.title, yt.length // 60))
-
-        plan, current_day, time_left = [], [], daily_time
-        for title, duration in videos:
-            if duration <= time_left:
-                current_day.append(f"{title} ({duration} min)")
-                time_left -= duration
-            else:
-                plan.append(current_day)
-                current_day = [f"{title} ({duration} min)"]
-                time_left = daily_time - duration
-        if current_day:
-            plan.append(current_day)
-
-        return jsonify({"plan": plan})
-
+        result = crew.orchestrate(
+            goal=onboarding.get("goal"),
+            skills=onboarding.get("skills", []),
+            hours=int(onboarding.get("hoursDay", 2)),
+            duration=1,   # dashboard roadmap default 1 month
+            weekends=True
+        )
+        mongo.collection.update_one(
+            {"email": session["user"]},
+            {"$set": {"goal": onboarding.get("goal"), "roadmap": result},
+             "$push": {"conversations": {"input": onboarding, "response": result, "ts": datetime.utcnow()}}}
+        )
+        return jsonify({"roadmap": result.get("milestones", [])})
     except Exception as e:
-        return jsonify({"error": str(e)}), 400
+        return jsonify({"error": str(e)}), 500
 
 
-# ============ 💼 JOB SCRAPER ==============
-def scrape_jobs(keyword):
-    url = f"https://in.indeed.com/jobs?q={keyword}&l=India"
-    response = requests.get(url, headers={"User-Agent": "Mozilla/5.0"})
-    soup = BeautifulSoup(response.text, "html.parser")
+# -------- Daily Plan Generator for Dashboard (AJAX) --------
+@app.route("/api/generate-plan", methods=["POST"])
+def api_generate_plan():
+    if "user" not in session:
+        return jsonify({"error": "Unauthorized"}), 401
+    data = request.get_json(force=True)
+    onboarding = data.get("onboarding", {})
 
-    job_list = []
-    for div in soup.select("div.job_seen_beacon")[:5]:
-        title = div.find("h2").get_text(strip=True)
-        company = div.find("span", class_="companyName").get_text(strip=True)
-        job_list.append({"title": title, "company": company})
-    return job_list
+    try:
+        query = f"""
+Generate a daily learning plan and 2 recommended playlists.
 
+Career Goal: {onboarding.get('goal')}
+Skills: {onboarding.get('skills')}
+Hours per weekday: {onboarding.get('hoursDay')}
+Hours per weekend: {onboarding.get('hoursWeekend')}
 
-# ============ ROUTES ==============
-@app.route("/")
-def index():
-    return render_template("index.html")
+Return JSON with two keys:
+- "plan": list of {{"time": "HH:MM", "title": "Task", "duration": minutes}}
+- "playlists": list of {{"title": str, "provider": str, "url": str, "length": str}}
+"""
+        result = crew.run_quick(query)
 
+        if isinstance(result, str):
+            try:
+                result = json.loads(result)
+            except Exception:
+                result = {"plan": [], "playlists": []}
 
-@app.route("/agent", methods=["POST"])
-def agent_route():
-    data = request.json
-    user_input = data.get("query", "")
-    response = skill_sync_agent(user_input)
-    return jsonify({"response": response})
-
-
-@app.route("/playlists")
-def playlists():
-    db_helper.select_db("SkillSyncDB", "playlists")
-    playlists = list(db_helper.collection.find())
-    return render_template("playlists.html", playlists=playlists)
-
-
-@app.route("/jobs")
-def jobs():
-    jobs = scrape_jobs("python developer")
-    return render_template("jobs.html", jobs=jobs)
+        mongo.collection.update_one(
+            {"email": session["user"]},
+            {"$push": {"conversations": {"input": onboarding, "response": result, "ts": datetime.utcnow()}}}
+        )
+        return jsonify(result)
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 
 
+# -------- Roadmap Page --------
 @app.route("/roadmap")
 def roadmap():
-    roadmap_steps = [
-        "Learn HTML & CSS",
-        "JavaScript Fundamentals",
-        "Build 3 Mini Projects",
-        "Learn React",
-        "Apply for Internships"
-    ]
-    return render_template("roadmap.html", roadmap=roadmap_steps)
+    if "user" not in session:
+        return redirect(url_for("home"))
+    user_doc = mongo.collection.find_one({"email": session["user"]})
+    if not user_doc or not user_doc.get("roadmap"):
+        flash("No roadmap found. Generate one from dashboard.", "error")
+        return redirect(url_for("dashboard"))
+    return render_template("roadmap.html", user=user_doc, roadmap=user_doc["roadmap"])
 
 
-# ============ MAIN ==============
+# -------- Update Task --------
+@app.route("/update_task", methods=["POST"])
+def update_task():
+    if "user" not in session:
+        return jsonify({"error": "Unauthorized"}), 401
+    data = request.get_json()
+    milestone_index = int(data.get("milestone_index"))
+    task_index = int(data.get("task_index"))
+    done = data.get("done")
+    resource = data.get("resource")
+    user_doc = mongo.collection.find_one({"email": session["user"]})
+    if not user_doc or not user_doc.get("roadmap"):
+        return jsonify({"error": "Roadmap not found"}), 404
+    try:
+        if resource:
+            task = user_doc["roadmap"]["milestones"][milestone_index]["tasks"][task_index]
+            if "user_resources" not in task:
+                task["user_resources"] = []
+            task["user_resources"].append(resource)
+        elif done is not None:
+            user_doc["roadmap"]["milestones"][milestone_index]["tasks"][task_index]["done"] = bool(done)
+        mongo.collection.update_one(
+            {"email": session["user"]},
+            {"$set": {"roadmap": user_doc["roadmap"]}}
+        )
+        return jsonify({"success": True})
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+# -------- Run App --------
 if __name__ == "__main__":
-    print("🚀 SkillSync Agent running at http://127.0.0.1:5000")
     app.run(debug=True)

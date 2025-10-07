@@ -1,0 +1,18 @@
+# Virtual Environment
+.venv/
+venv/
+env/
+.env
+
+# Compiled Python files
+__pycache__/
+*.pyc
+
+# Operating System files
+.DS_Store
+
+# IDE temporary files
+.vscode/
+
+# Project-specific secrets (CRITICAL)
+secrets.yaml

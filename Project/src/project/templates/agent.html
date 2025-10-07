@@ -1,65 +1,80 @@
-{% extends "base.html" %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Our Agents - SkillSync</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="min-h-screen bg-gray-900 text-white flex flex-col">
 
-{% block title %}AI Agent - SkillSync{% endblock %}
-
-{% block content %}
-<section class="max-w-3xl mx-auto text-center">
-  <h2 class="text-2xl font-bold text-gray-800 mb-6">Your AI Learning Assistant</h2>
-
-  <!-- Input -->
-  <div class="bg-white shadow rounded-2xl p-6">
-    <label for="goalInput" class="block text-lg font-medium text-gray-700 mb-2">What’s your goal?</label>
-    <div class="flex items-center border rounded-lg overflow-hidden">
-      <input id="goalInput" type="text" placeholder="e.g., Become a Data Scientist" class="flex-1 px-4 py-3 focus:outline-none">
-      <button id="micBtn" class="px-4 bg-indigo-600 text-white hover:bg-indigo-700">🎤</button>
+  <!-- Navbar -->
+  <nav class="fixed top-0 w-full z-50 bg-white/10 backdrop-blur-xl border-b border-white/20">
+    <div class="max-w-7xl mx-auto px-6 flex items-center justify-between h-16">
+      <a href="/" class="text-2xl font-bold bg-gradient-to-r from-indigo-400 to-purple-500 bg-clip-text text-transparent">SkillSync</a>
+      <div class="hidden md:flex space-x-6 text-gray-300">
+        <a href="/" class="hover:text-yellow-400">Home</a>
+        <a href="/resources.html" class="hover:text-yellow-400">Resources</a>
+        <a href="/agents.html" class="text-yellow-400">Agents</a>
+        <a href="/career-paths.html" class="hover:text-yellow-400">Career Paths</a>
+        <a href="/jobs.html" class="hover:text-yellow-400">Jobs</a>
+      </div>
     </div>
-    <button id="generateBtn" class="mt-4 px-6 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700">Generate Plan</button>
-  </div>
+  </nav>
 
-  <!-- Agent Response -->
-  <div id="agentResponse" class="hidden mt-8 bg-indigo-50 border border-indigo-200 rounded-2xl p-6 text-left shadow">
-    <h3 class="text-xl font-semibold text-indigo-700 mb-2">Your AI Agent says:</h3>
-    <p id="responseText" class="text-gray-700 mb-4">Processing your goal...</p>
+  <!-- Main -->
+  <main class="flex-1 px-6 pt-24 pb-12">
+    <h1 class="text-3xl font-bold text-center mb-8">Meet Our AI Agents 🤖</h1>
+    <p class="text-center text-gray-400 mb-10">Choose the right AI assistant to guide your career journey</p>
 
-    <h4 class="font-medium text-gray-800">Suggested Playlists:</h4>
-    <ul class="list-disc list-inside text-gray-600 mt-1 mb-4">
-      <li>Intro to Data Science</li>
-      <li>Python Basics</li>
-      <li>SQL Essentials</li>
-    </ul>
+    <div id="agentsGrid" class="grid md:grid-cols-2 lg:grid-cols-3 gap-8 max-w-6xl mx-auto">
+      <!-- Agent Card -->
+      <div id="goal-interpreter" class="agent-card p-6 rounded-2xl bg-white/10 backdrop-blur-lg border border-white/20 hover:border-yellow-400 transition group">
+        <h2 class="text-xl font-semibold text-indigo-400">🎯 Goal Interpreter</h2>
+        <p class="text-gray-300 mt-2">Understand your goals & current skills, and transform them into actionable plans.</p>
+        <a href="/goal-interpreter.html" class="inline-block mt-4 px-4 py-2 rounded-full bg-gradient-to-r from-indigo-500 to-purple-500 hover:scale-105 transition">Try Now</a>
+      </div>
 
-    <h4 class="font-medium text-gray-800">Roadmap:</h4>
-    <ol class="list-decimal list-inside text-gray-600 mt-1">
-      <li>Learn Python</li>
-      <li>Data Cleaning & Analysis</li>
-      <li>SQL for Data</li>
-      <li>Build 2 Projects</li>
-    </ol>
-  </div>
-</section>
+      <div id="skill-builder" class="agent-card p-6 rounded-2xl bg-white/10 backdrop-blur-lg border border-white/20 hover:border-yellow-400 transition group">
+        <h2 class="text-xl font-semibold text-indigo-400">🛠️ Skill Builder</h2>
+        <p class="text-gray-300 mt-2">Get personalized resources & exercises to level up your technical skills.</p>
+        <a href="/resources.html" class="inline-block mt-4 px-4 py-2 rounded-full bg-gradient-to-r from-indigo-500 to-purple-500 hover:scale-105 transition">Explore</a>
+      </div>
 
-<script>
-  const micBtn = document.getElementById('micBtn');
-  const goalInput = document.getElementById('goalInput');
-  const generateBtn = document.getElementById('generateBtn');
-  const agentResponse = document.getElementById('agentResponse');
-  const responseText = document.getElementById('responseText');
+      <div id="job-finder" class="agent-card p-6 rounded-2xl bg-white/10 backdrop-blur-lg border border-white/20 hover:border-yellow-400 transition group">
+        <h2 class="text-xl font-semibold text-indigo-400">💼 Job Finder</h2>
+        <p class="text-gray-300 mt-2">Discover job opportunities that match your career goals and skills.</p>
+        <a href="/jobs.html" class="inline-block mt-4 px-4 py-2 rounded-full bg-gradient-to-r from-indigo-500 to-purple-500 hover:scale-105 transition">Find Jobs</a>
+      </div>
 
-  if ('webkitSpeechRecognition' in window) {
-    const recognition = new webkitSpeechRecognition();
-    recognition.lang = 'en-US';
-    recognition.onresult = (event) => {
-      goalInput.value = event.results[0][0].transcript;
-    };
-    micBtn.addEventListener('click', () => recognition.start());
-  }
+      <div id="resume-enhancer" class="agent-card p-6 rounded-2xl bg-white/10 backdrop-blur-lg border border-white/20 hover:border-yellow-400 transition group">
+        <h2 class="text-xl font-semibold text-indigo-400">📄 Resume Enhancer</h2>
+        <p class="text-gray-300 mt-2">Polish your resume with AI suggestions to stand out in applications.</p>
+        <a href="#" class="inline-block mt-4 px-4 py-2 rounded-full bg-gradient-to-r from-indigo-500 to-purple-500 hover:scale-105 transition">Enhance</a>
+      </div>
 
-  generateBtn.addEventListener('click', () => {
-    const goal = goalInput.value.trim();
-    if (goal) {
-      agentResponse.classList.remove('hidden');
-      responseText.textContent = `Great choice! Let's create a roadmap for: \"${goal}\"`;
+      <div id="career-guide" class="agent-card p-6 rounded-2xl bg-white/10 backdrop-blur-lg border border-white/20 hover:border-yellow-400 transition group">
+        <h2 class="text-xl font-semibold text-indigo-400">🧭 Career Path Guide</h2>
+        <p class="text-gray-300 mt-2">Get a roadmap of career paths with clear milestones & resources.</p>
+        <a href="/career-paths.html" class="inline-block mt-4 px-4 py-2 rounded-full bg-gradient-to-r from-indigo-500 to-purple-500 hover:scale-105 transition">View Paths</a>
+      </div>
+    </div>
+  </main>
+
+  <footer class="bg-white/5 backdrop-blur-xl border-t border-white/20 text-center py-4 text-gray-400 text-sm">
+    © 2025 SkillSync. All rights reserved.
+  </footer>
+
+  <script>
+    // Highlight agent if passed in query string
+    const urlParams = new URLSearchParams(window.location.search);
+    const agentId = urlParams.get("agent");
+    if(agentId){
+      const el = document.getElementById(agentId);
+      if(el){
+        el.classList.add("border-yellow-400", "scale-105");
+      }
     }
-  });
-</script>
-{% endblock %}
+  </script>
+</body>
+</html>

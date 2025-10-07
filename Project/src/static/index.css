@@ -1,0 +1,273 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* SkillSync Design System - Futuristic SaaS Landing Page
+   All colors, gradients, glassmorphism effects, and animations defined here.
+   All colors MUST be HSL for consistent theming.
+*/
+
+@layer base {
+  :root {
+    /* Core Colors - Futuristic Purple/Blue/Teal Palette */
+    --background: 0 0% 100%;
+    --foreground: 222.2 84% 4.9%;
+    
+    /* Brand Colors - Purple to Teal Spectrum */
+    --primary: 262 83% 58%;        /* Vibrant Purple */
+    --primary-foreground: 210 40% 98%;
+    --primary-glow: 262 100% 75%;   /* Lighter purple for glows */
+    
+    --secondary: 217 91% 60%;       /* Electric Blue */
+    --secondary-foreground: 210 40% 98%;
+    --secondary-glow: 217 100% 75%;
+    
+    --accent: 174 72% 56%;          /* Vibrant Teal */
+    --accent-foreground: 210 40% 98%;
+    --accent-glow: 174 100% 70%;
+    
+    --success: 142 76% 36%;         /* Green for AI Assistant */
+    --success-foreground: 210 40% 98%;
+    --success-glow: 142 86% 56%;
+    
+    /* Glass/Card Colors */
+    --card: 0 0% 100%;
+    --card-foreground: 222.2 84% 4.9%;
+    --glass: 0 0% 100% / 0.1;       /* Glassmorphism base */
+    --glass-border: 0 0% 100% / 0.2;
+    
+    /* Neutral System */
+    --muted: 210 40% 96.1%;
+    --muted-foreground: 215.4 16.3% 46.9%;
+    --border: 214.3 31.8% 91.4%;
+    --input: 214.3 31.8% 91.4%;
+    --ring: 222.2 84% 4.9%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 222.2 84% 4.9%;
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 210 40% 98%;
+    
+    /* Design System Gradients */
+    --gradient-hero: linear-gradient(135deg, hsl(var(--primary)), hsl(var(--secondary)), hsl(var(--accent)));
+    --gradient-diagonal: linear-gradient(135deg, hsl(var(--primary)) 0%, hsl(var(--secondary)) 50%, hsl(var(--accent)) 100%);
+    --gradient-card: linear-gradient(145deg, hsl(var(--glass)), hsl(0 0% 100% / 0.05));
+    --gradient-glow: radial-gradient(circle at center, hsl(var(--primary-glow) / 0.3), transparent 70%);
+    
+    /* Shadows & Effects */
+    --shadow-glass: 0 8px 32px rgba(31, 38, 135, 0.37);
+    --shadow-glow: 0 0 40px hsl(var(--primary-glow) / 0.4);
+    --shadow-elevation: 0 10px 30px -10px hsl(var(--primary) / 0.3);
+    --shadow-floating: 0 20px 40px -12px rgba(0, 0, 0, 0.25);
+    
+    /* Typography */
+    --font-display: 'Inter', system-ui, -apple-system, sans-serif;
+    
+    /* Animations */
+    --transition-smooth: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    --transition-bounce: all 0.3s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+    
+    --radius: 1rem;
+    
+    /* Sidebar (keeping existing) */
+    --sidebar-background: 0 0% 98%;
+    --sidebar-foreground: 240 5.3% 26.1%;
+    --sidebar-primary: 240 5.9% 10%;
+    --sidebar-primary-foreground: 0 0% 98%;
+    --sidebar-accent: 240 4.8% 95.9%;
+    --sidebar-accent-foreground: 240 5.9% 10%;
+    --sidebar-border: 220 13% 91%;
+    --sidebar-ring: 217.2 91.2% 59.8%;
+  }
+
+  .dark {
+    /* Dark mode with enhanced glassmorphism */
+    --background: 222.2 84% 4.9%;
+    --foreground: 210 40% 98%;
+    
+    --card: 222.2 84% 4.9%;
+    --card-foreground: 210 40% 98%;
+    --glass: 0 0% 0% / 0.3;
+    --glass-border: 0 0% 100% / 0.1;
+    
+    --popover: 222.2 84% 4.9%;
+    --popover-foreground: 210 40% 98%;
+    
+    --primary: 262 83% 58%;
+    --primary-foreground: 222.2 47.4% 11.2%;
+    
+    --secondary: 217.2 32.6% 17.5%;
+    --secondary-foreground: 210 40% 98%;
+    
+    --muted: 217.2 32.6% 17.5%;
+    --muted-foreground: 215 20.2% 65.1%;
+    
+    --accent: 174 72% 56%;
+    --accent-foreground: 210 40% 98%;
+    
+    --destructive: 0 62.8% 30.6%;
+    --destructive-foreground: 210 40% 98%;
+    
+    --border: 217.2 32.6% 17.5%;
+    --input: 217.2 32.6% 17.5%;
+    --ring: 212.7 26.8% 83.9%;
+    
+    /* Enhanced dark gradients */
+    --gradient-hero: linear-gradient(135deg, hsl(var(--primary)), hsl(var(--secondary)), hsl(var(--accent)));
+    --gradient-card: linear-gradient(145deg, hsl(var(--glass)), hsl(0 0% 0% / 0.1));
+    --shadow-glass: 0 8px 32px rgba(0, 0, 0, 0.6);
+    
+    --sidebar-background: 240 5.9% 10%;
+    --sidebar-foreground: 240 4.8% 95.9%;
+    --sidebar-primary: 224.3 76.3% 48%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 240 3.7% 15.9%;
+    --sidebar-accent-foreground: 240 4.8% 95.9%;
+    --sidebar-border: 240 3.7% 15.9%;
+    --sidebar-ring: 217.2 91.2% 59.8%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground;
+    font-family: var(--font-display);
+    font-feature-settings: "rlig" 1, "calt" 1;
+  }
+  
+  /* Glassmorphism Base Classes */
+  .glass {
+    background: var(--gradient-card);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border: 1px solid hsl(var(--glass-border));
+    box-shadow: var(--shadow-glass);
+  }
+  
+  .glass-strong {
+    background: hsl(var(--glass));
+    backdrop-filter: blur(30px);
+    -webkit-backdrop-filter: blur(30px);
+    border: 1px solid hsl(var(--glass-border));
+    box-shadow: var(--shadow-glass);
+  }
+}
+
+@layer components {
+  /* Hero Gradient Background with Animation */
+  .hero-gradient {
+    background: var(--gradient-diagonal);
+    background-size: 400% 400%;
+    animation: gradientShift 8s ease infinite;
+  }
+  
+  /* Button Variants */
+  .btn-hero {
+    @apply glass rounded-2xl px-6 py-3 font-semibold text-white transition-all duration-300;
+    background: hsl(var(--primary));
+    box-shadow: var(--shadow-elevation), 0 0 20px hsl(var(--primary-glow) / 0.3);
+  }
+  
+  .btn-hero:hover {
+    @apply scale-105 -translate-y-1;
+    box-shadow: var(--shadow-floating), 0 0 30px hsl(var(--primary-glow) / 0.5);
+  }
+  
+  .btn-glass {
+    @apply glass rounded-2xl px-6 py-3 font-semibold text-foreground transition-all duration-300;
+    border: 2px solid hsl(var(--glass-border));
+  }
+  
+  .btn-glass:hover {
+    @apply scale-105 -translate-y-1;
+    background: hsl(var(--glass));
+    border-color: hsl(var(--primary) / 0.3);
+    box-shadow: var(--shadow-floating);
+  }
+  
+  .btn-accent {
+    @apply rounded-2xl px-6 py-3 font-semibold text-white transition-all duration-300;
+    background: hsl(var(--success));
+    box-shadow: var(--shadow-elevation), 0 0 20px hsl(var(--success-glow) / 0.3);
+  }
+  
+  .btn-accent:hover {
+    @apply scale-105 -translate-y-1;
+    background: hsl(var(--success));
+    box-shadow: var(--shadow-floating), 0 0 30px hsl(var(--success-glow) / 0.5);
+  }
+  
+  /* Feature Cards */
+  .feature-card {
+    @apply glass rounded-3xl p-8 transition-all duration-500 cursor-pointer;
+  }
+  
+  .feature-card:hover {
+    @apply -translate-y-2 scale-105;
+    box-shadow: var(--shadow-floating), 0 0 40px hsl(var(--primary-glow) / 0.2);
+  }
+  
+  /* AI Assistant Bubble */
+  .ai-bubble {
+    @apply glass-strong rounded-3xl p-8 relative overflow-hidden;
+  }
+  
+  .ai-bubble::before {
+    content: '';
+    position: absolute;
+    top: -50%;
+    left: -50%;
+    width: 200%;
+    height: 200%;
+    background: var(--gradient-glow);
+    animation: rotate 20s linear infinite;
+    z-index: -1;
+  }
+}
+
+@layer utilities {
+  /* Animation Keyframes */
+  @keyframes gradientShift {
+    0% { background-position: 0% 50%; }
+    50% { background-position: 100% 50%; }
+    100% { background-position: 0% 50%; }
+  }
+  
+  @keyframes float {
+    0%, 100% { transform: translateY(0px); }
+    50% { transform: translateY(-10px); }
+  }
+  
+  @keyframes rotate {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+  }
+  
+  @keyframes pulse-glow {
+    0%, 100% { box-shadow: 0 0 20px hsl(var(--success-glow) / 0.3); }
+    50% { box-shadow: 0 0 40px hsl(var(--success-glow) / 0.6); }
+  }
+  
+  /* Utility Classes */
+  .animate-float {
+    animation: float 3s ease-in-out infinite;
+  }
+  
+  .animate-pulse-glow {
+    animation: pulse-glow 2s ease-in-out infinite;
+  }
+  
+  .text-gradient {
+    background: var(--gradient-diagonal);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+  
+  .glow-text {
+    text-shadow: 0 0 20px hsl(var(--primary-glow) / 0.5);
+  }
+}

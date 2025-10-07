@@ -1,0 +1,270 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Skill Sync</title>
+
+    <!-- Tailwind CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+
+    <style>
+      body {
+        background: linear-gradient(to bottom right, #0f172a, #1e293b);
+      }
+      .glass {
+        backdrop-filter: blur(14px);
+        -webkit-backdrop-filter: blur(14px);
+      }
+    </style>
+  </head>
+  <body class="min-h-screen text-slate-100">
+    <!-- NAVBAR -->
+    <header class="sticky top-0 z-50 bg-slate-900/70 glass border-b border-slate-700">
+      <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+        <div class="flex h-16 items-center justify-between">
+          <a href="#" class="flex items-center gap-2 font-bold text-xl">
+            <span class="inline-block h-8 w-8 rounded-lg bg-gradient-to-tr from-indigo-500 to-pink-500"></span>
+            <span class="text-white">Skill Sync</span>
+          </a>
+          <nav class="hidden md:flex items-center gap-8 text-sm font-medium text-slate-300">
+            <a href="#agents" class="hover:text-indigo-400">Our Agents</a>
+          </nav>
+          <div class="flex items-center gap-2">
+            <!-- User Icon -->
+            <button id="authBtn" class="p-2 rounded-full hover:bg-slate-700">
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-indigo-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                      d="M5.121 17.804A9.969 9.969 0 0112 15c2.21 0 4.254.72 5.879 1.93M15 11a3 3 0 11-6 0 3 3 0 016 0z"/>
+              </svg>
+            </button>
+          </div>
+        </div>
+      </div>
+    </header>
+{% with messages = get_flashed_messages(with_categories=true) %}
+  {% if messages %}
+    <div class="fixed top-20 right-5 z-50 space-y-2">
+      {% for category, message in messages %}
+        <div class="px-4 py-2 rounded-lg shadow-lg 
+                    {% if category == 'error' %} bg-red-500 text-white 
+                    {% elif category == 'success' %} bg-green-500 text-white 
+                    {% endif %}">
+          {{ message }}
+        </div>
+      {% endfor %}
+    </div>
+  {% endif %}
+{% endwith %}
+
+    <!-- HERO -->
+    <section class="relative bg-slate-950">
+      <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-20 sm:py-28 text-center">
+        <h1 class="text-4xl sm:text-6xl font-extrabold leading-tight">
+          Level Up Your Career with <span class="bg-clip-text text-transparent bg-gradient-to-r from-indigo-400 to-pink-400">AI Guidance</span>
+        </h1>
+        <p class="mt-4 text-slate-300 text-lg max-w-2xl mx-auto">
+          Get personalized support, curated resources, and actionable steps — powered by AI agents.
+        </p>
+        <div class="mt-8 flex flex-wrap justify-center gap-4">
+          <a href="#agents" class="rounded-lg bg-indigo-500 px-6 py-3 font-medium hover:bg-indigo-600">Explore Agents</a>
+          <a href="#ai" class="rounded-lg border border-slate-600 px-6 py-3 font-medium hover:border-slate-400">Ask Agent</a>
+        </div>
+      </div>
+    </section>
+
+    <!-- OUR AGENTS -->
+    <section id="agents" class="py-20">
+      <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+        <div class="max-w-2xl">
+          <h2 class="text-3xl sm:text-4xl font-bold">Our AI Agents</h2>
+          <p class="mt-3 text-slate-300">Meet your smart career companions.</p>
+        </div>
+
+        <div class="mt-12 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+          <!-- Career Agent -->
+          <article class="rounded-xl border border-slate-700 bg-slate-800/50 p-6 hover:bg-slate-800 transition">
+            <h3 class="text-xl font-semibold">Career Agent</h3>
+            <p class="mt-2 text-slate-300">Analyze your goals and get personalized career advice.</p>
+          </article>
+
+          <!-- Roadmap Agent -->
+          <article class="rounded-xl border border-slate-700 bg-slate-800/50 p-6 hover:bg-slate-800 transition">
+            <h3 class="text-xl font-semibold">Roadmap Agent</h3>
+            <p class="mt-2 text-slate-300">Generate learning paths tailored to your skills & goals.</p>
+          </article>
+
+          <!-- Resources Agent -->
+          <article class="rounded-xl border border-slate-700 bg-slate-800/50 p-6 hover:bg-slate-800 transition">
+            <h3 class="text-xl font-semibold">Resources Agent</h3>
+            <p class="mt-2 text-slate-300">Find top tutorials, courses, and articles instantly.</p>
+          </article>
+
+          <!-- Playlist Agent -->
+          <article class="rounded-xl border border-slate-700 bg-slate-800/50 p-6 hover:bg-slate-800 transition">
+            <h3 class="text-xl font-semibold">Playlist Agent</h3>
+            <p class="mt-2 text-slate-300">Curated video playlists to learn efficiently.</p>
+          </article>
+
+          <!-- Community Agent -->
+          <article class="rounded-xl border border-slate-700 bg-slate-800/50 p-6 hover:bg-slate-800 transition sm:col-span-2 lg:col-span-1">
+            <h3 class="text-xl font-semibold">Community Agent</h3>
+            <p class="mt-2 text-slate-300">Suggest communities and networks to grow faster.</p>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <!-- AI SECTION -->
+    <section id="ai" class="py-20 bg-slate-900 border-y border-slate-700">
+      <div class="mx-auto max-w-3xl px-4 sm:px-6 lg:px-8 text-center">
+        <h2 class="text-3xl sm:text-4xl font-bold">Your AI Assistant</h2>
+        <p class="mt-3 text-slate-300">
+          Ask anything about your career, learning resources, or job opportunities — our AI agents are ready to help.
+        </p>
+        <a href="#" id="authBtn2" class="mt-8 inline-block rounded-lg bg-indigo-500 px-6 py-3 font-medium hover:bg-indigo-600">Get Started</a>
+      </div>
+    </section>
+
+    <!-- FOOTER -->
+    <footer class="py-12 bg-slate-950">
+      <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+        <div class="grid gap-10 sm:grid-cols-2 lg:grid-cols-4">
+          <div>
+            <div class="flex items-center gap-2 font-bold text-lg">
+              <span class="inline-block h-8 w-8 rounded-lg bg-gradient-to-tr from-indigo-500 to-pink-500"></span>
+              <span>AI Skill Sync</span>
+            </div>
+            <p class="mt-3 text-slate-400">Helping you navigate your career with AI-powered guidance and curated resources.</p>
+          </div>
+          <div>
+            <h5 class="font-semibold">Explore</h5>
+            <ul class="mt-3 space-y-2 text-slate-400">
+              <li><a href="#agents" class="hover:text-indigo-300">Our Agents</a></li>
+              <li><a href="#ai" class="hover:text-indigo-300">Ask Agent</a></li>
+            </ul>
+          </div>
+          <div>
+            <h5 class="font-semibold">Company</h5>
+            <ul class="mt-3 space-y-2 text-slate-400">
+              <li><a href="#" class="hover:text-indigo-300">About</a></li>
+              <li><a href="#" class="hover:text-indigo-300">Careers</a></li>
+              <li><a href="#" class="hover:text-indigo-300">Blog</a></li>
+              <li><a href="#" class="hover:text-indigo-300">Contact</a></li>
+            </ul>
+          </div>
+          <div>
+            <h5 class="font-semibold">Support</h5>
+            <ul class="mt-3 space-y-2 text-slate-400">
+              <li><a href="#" class="hover:text-indigo-300">Help Center</a></li>
+              <li><a href="#" class="hover:text-indigo-300">Community</a></li>
+              <li><a href="#" class="hover:text-indigo-300">Privacy Policy</a></li>
+              <li><a href="#" class="hover:text-indigo-300">Terms</a></li>
+            </ul>
+          </div>
+        </div>
+        <div class="mt-10 border-t border-slate-700 pt-6 text-sm text-slate-500 text-center">© 2025 AI Skill Sync. All rights reserved.</div>
+      </div>
+    </footer>
+
+    <!-- LOGIN/SIGNUP MODAL -->
+    <div id="authModal" class="fixed inset-0 hidden z-50">
+      <!-- background blur -->
+      <div class="absolute inset-0 bg-black/60 backdrop-blur-sm"></div>
+
+      <!-- modal box -->
+      <div class="relative mx-auto mt-24 w-full max-w-md rounded-2xl shadow-2xl bg-slate-900/90 glass p-8 z-10">
+        <button id="closeModal" class="absolute top-4 right-4 text-gray-400 hover:text-white">✖</button>
+
+        <!-- FORMS WRAPPER -->
+        <div class="overflow-hidden relative h-[360px]">
+          <div id="forms" class="flex w-[200%] transform transition-transform duration-500 ease-in-out">
+
+            <!-- LOGIN FORM -->
+            <div class="w-1/2 flex-shrink-0 px-2">
+              <h2 class="text-2xl font-bold text-center text-white mb-6">Welcome Back</h2>
+              <form method="POST" action="/login" class="space-y-4">
+                <input type="email" name="email" placeholder="Email" required 
+                       class="w-full px-4 py-2 rounded-lg bg-white/10 text-white placeholder-gray-300 
+                              focus:outline-none focus:ring-2 focus:ring-indigo-400"/>
+                <input type="password" name="password" placeholder="Password" required 
+                       class="w-full px-4 py-2 rounded-lg bg-white/10 text-white placeholder-gray-300 
+                              focus:outline-none focus:ring-2 focus:ring-indigo-400"/>
+                <button type="submit" 
+                        class="w-full py-2 rounded-lg bg-gradient-to-r from-indigo-500 to-purple-500 
+                               text-white font-semibold hover:scale-105 transition">
+                  Login
+                </button>
+              </form>
+              <p class="text-center text-sm text-gray-300 mt-4">
+                Don’t have an account? 
+                <a href="#" id="showSignup" class="text-yellow-400 hover:underline">Sign up</a>
+              </p>
+            </div>
+
+            <!-- SIGNUP FORM -->
+            <div class="w-1/2 flex-shrink-0 px-2">
+              <h2 class="text-2xl font-bold text-center text-white mb-6">Join SkillSync</h2>
+              <form method="POST" action="/signup" class="space-y-4">
+                <input type="text" name="name" placeholder="Full Name" required
+                       class="w-full px-4 py-2 rounded-lg bg-white/10 text-white placeholder-gray-300 
+                              focus:outline-none focus:ring-2 focus:ring-purple-400"/>
+                <input type="email" name="email" placeholder="Email" required
+                       class="w-full px-4 py-2 rounded-lg bg-white/10 text-white placeholder-gray-300 
+                              focus:outline-none focus:ring-2 focus:ring-purple-400"/>
+                <input type="password" name="password" placeholder="Password" required minlength="8"
+                       class="w-full px-4 py-2 rounded-lg bg-white/10 text-white placeholder-gray-300 
+                              focus:outline-none focus:ring-2 focus:ring-purple-400"/>
+                <input type="password" name="confirm_password" placeholder="Confirm Password" required minlength="8"
+                       class="w-full px-4 py-2 rounded-lg bg-white/10 text-white placeholder-gray-300 
+                              focus:outline-none focus:ring-2 focus:ring-purple-400"/>
+                <button type="submit"
+                        class="w-full py-2 rounded-lg bg-gradient-to-r from-purple-500 to-indigo-500 
+                               text-white font-semibold hover:scale-105 transition">
+                  Sign Up
+                </button>
+              </form>
+              <p class="text-center text-sm text-gray-300 mt-4">
+                Already have an account? 
+                <a href="#" id="showLogin" class="text-yellow-400 hover:underline">Login</a>
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- SCRIPT -->
+    <script>
+      const authBtn = document.getElementById('authBtn');
+      const authBtn2 = document.getElementById('authBtn2');
+      const authModal = document.getElementById('authModal');
+      const closeModal = document.getElementById('closeModal');
+      const forms = document.getElementById('forms');
+      const showSignup = document.getElementById('showSignup');
+      const showLogin = document.getElementById('showLogin');
+
+      function openModal() {
+        authModal.classList.remove('hidden');
+        forms.style.transform = "translateX(0)"; // always start with login
+      }
+
+      authBtn.addEventListener('click', openModal);
+      if(authBtn2) authBtn2.addEventListener('click', openModal);
+
+      closeModal.addEventListener('click', () => {
+        authModal.classList.add('hidden');
+      });
+
+      showSignup.addEventListener('click', (e) => {
+        e.preventDefault();
+        forms.style.transform = "translateX(-50%)";
+      });
+
+      showLogin.addEventListener('click', (e) => {
+        e.preventDefault();
+        forms.style.transform = "translateX(0)";
+      });
+    </script>
+  </body>
+</html>

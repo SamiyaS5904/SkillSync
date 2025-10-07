@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Goal Interpreter - SkillSync</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="min-h-screen bg-gray-900 text-white flex flex-col">
+
+  <!-- Navbar -->
+  <nav class="fixed top-0 w-full z-50 bg-white/10 backdrop-blur-xl border-b border-white/20">
+    <div class="max-w-7xl mx-auto px-6 flex items-center justify-between h-16">
+      <a href="/" class="text-2xl font-bold bg-gradient-to-r from-indigo-400 to-purple-500 bg-clip-text text-transparent">SkillSync</a>
+      <div class="hidden md:flex space-x-6 text-gray-300">
+        <a href="/" class="hover:text-yellow-400">Home</a>
+        <a href="/resources" class="hover:text-yellow-400">Resources</a>
+        <a href="/agents" class="hover:text-yellow-400">Agents</a>
+        <a href="/career-paths" class="hover:text-yellow-400">Career Paths</a>
+        <a href="/jobs" class="hover:text-yellow-400">Jobs</a>
+      </div>
+    </div>
+  </nav>
+
+  <!-- Main Content -->
+  <main class="flex-1 flex items-center justify-center px-4 pt-20">
+    <div class="w-full max-w-xl p-8 rounded-2xl bg-white/10 backdrop-blur-xl border border-white/20 shadow-lg space-y-6">
+
+      <h2 class="text-2xl font-bold text-center">Tell Us About Your Journey 🚀</h2>
+      <p class="text-gray-400 text-center">We’ll match you with the best AI Agent based on your skills and goals.</p>
+
+      <!-- Form -->
+      <div class="space-y-4 text-left">
+        <!-- Current Skills -->
+        <div>
+          <label class="block mb-2 font-medium text-gray-300">Your Current Skills</label>
+          <textarea id="skillsInput" rows="2" placeholder="e.g. Basic Java, HTML, CSS" 
+            class="w-full p-3 rounded-lg bg-gray-800 border border-gray-700 focus:ring-2 focus:ring-indigo-500 focus:outline-none text-white"></textarea>
+        </div>
+
+        <!-- Career Goal -->
+        <div>
+          <label class="block mb-2 font-medium text-gray-300">Your Career Goal</label>
+          <div class="relative">
+            <textarea id="goalInput" rows="3" placeholder="e.g. I want to become a Java Backend Developer"
+              class="w-full p-3 rounded-lg bg-gray-800 border border-gray-700 focus:ring-2 focus:ring-indigo-500 focus:outline-none text-white pr-12"></textarea>
+            
+            <!-- Mic inside textarea -->
+            <button id="micBtn" class="absolute bottom-3 right-3 w-9 h-9 flex items-center justify-center rounded-full bg-gradient-to-r from-indigo-500 to-purple-500 hover:scale-110 transition">
+              🎤
+            </button>
+          </div>
+        </div>
+
+        <!-- Submit -->
+        <button id="submitBtn" 
+          class="w-full py-3 mt-2 rounded-lg bg-gradient-to-r from-indigo-500 to-purple-500 font-semibold hover:scale-[1.02] transition">
+          Find My Agent
+        </button>
+      </div>
+
+      <!-- Suggested Agent -->
+      <div id="resultCard" class="hidden mt-6 p-6 rounded-xl bg-gray-800 border border-gray-700 text-left animate-fadeIn">
+        <h3 class="text-xl font-semibold text-indigo-400">Recommended Agent:</h3>
+        <p id="structuredPrompt" class="mt-2 text-gray-300"></p>
+        <p id="suggestionText" class="mt-3 text-gray-300 font-semibold"></p>
+        <a href="/agents" class="inline-block mt-4 px-4 py-2 rounded-full bg-gradient-to-r from-indigo-500 to-purple-500 font-semibold hover:scale-105 transition">
+          Explore Agent
+        </a>
+      </div>
+
+    </div>
+  </main>
+
+  <!-- Footer -->
+  <footer class="bg-white/5 backdrop-blur-xl border-t border-white/20 text-center py-4 text-gray-400 text-sm">
+    © 2025 SkillSync. All rights reserved.
+  </footer>
+
+  <!-- JS -->
+  <script>
+    const micBtn = document.getElementById("micBtn");
+    const skillsInput = document.getElementById("skillsInput");
+    const goalInput = document.getElementById("goalInput");
+    const submitBtn = document.getElementById("submitBtn");
+    const resultCard = document.getElementById("resultCard");
+    const structuredPrompt = document.getElementById("structuredPrompt");
+    const suggestionText = document.getElementById("suggestionText");
+
+    // Voice recognition
+    micBtn.addEventListener("click", () => {
+      const recognition = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
+      recognition.lang = "en-US";
+      recognition.start();
+
+      recognition.onresult = (event) => {
+        const transcript = event.results[0][0].transcript;
+        goalInput.value = transcript;
+      };
+
+      recognition.onerror = () => {
+        alert("Voice input not supported in this browser.");
+      };
+    });
+
+    // On Submit
+    submitBtn.addEventListener("click", () => {
+      const skills = skillsInput.value.trim();
+      const goal = goalInput.value.trim();
+
+      if (!skills || !goal) {
+        alert("Please fill in both skills and career goal!");
+        return;
+      }
+
+      // Structured prompt (to send later to backend/AI)
+      structuredPrompt.innerHTML = `The user currently knows: <span class="font-bold">${skills}</span><br>and wants to become: <span class="font-bold">${goal}</span>.`;
+
+      // Simple suggestion logic
+      if (goal.toLowerCase().includes("developer")) {
+        suggestionText.innerHTML = `👉 Suggested Agent: <span class="text-indigo-400">Skill Builder Agent 🛠️</span>`;
+      } else if (goal.toLowerCase().includes("job")) {
+        suggestionText.innerHTML = `👉 Suggested Agent: <span class="text-indigo-400">Job Finder Agent 💼</span>`;
+      } else {
+        suggestionText.innerHTML = `👉 Suggested Agent: <span class="text-indigo-400">Learning Agent 📘</span>`;
+      }
+
+      resultCard.classList.remove("hidden");
+    });
+  </script>
+
+  <style>
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    .animate-fadeIn { animation: fadeIn 0.5s ease-in-out; }
+  </style>
+</body>
+</html>

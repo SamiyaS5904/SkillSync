@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Resources - SkillSync</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="min-h-screen bg-gray-900 text-white flex flex-col">
+
+  <!-- Navbar -->
+  <nav class="fixed top-0 w-full z-50 bg-white/10 backdrop-blur-xl border-b border-white/20">
+    <div class="max-w-7xl mx-auto px-6 flex items-center justify-between h-16">
+      <a href="/" class="text-2xl font-bold bg-gradient-to-r from-indigo-400 to-purple-500 bg-clip-text text-transparent">SkillSync</a>
+      <div class="hidden md:flex space-x-6 text-gray-300">
+        <a href="/" class="hover:text-yellow-400">Home</a>
+        <a href="/resources.html" class="text-yellow-400">Resources</a>
+        <a href="/agents.html" class="hover:text-yellow-400">Agents</a>
+        <a href="/career-paths.html" class="hover:text-yellow-400">Career Paths</a>
+        <a href="/jobs.html" class="hover:text-yellow-400">Jobs</a>
+      </div>
+    </div>
+  </nav>
+
+  <!-- Main -->
+  <main class="flex-1 px-6 pt-24 pb-12 max-w-6xl mx-auto">
+    <h1 class="text-3xl font-bold text-center mb-8">Curated Resources 📚</h1>
+    <p class="text-center text-gray-400 mb-6">Learn with AI-curated study materials</p>
+
+    <!-- Search/Filter -->
+    <div class="flex justify-center mb-8">
+      <input type="text" placeholder="Search resources..." class="w-full max-w-md p-3 rounded-xl bg-gray-800 border border-gray-700 text-white focus:ring-2 focus:ring-indigo-500 outline-none"/>
+    </div>
+
+    <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
+      <div class="p-6 rounded-xl bg-white/10 backdrop-blur-lg border border-white/20">
+        <h2 class="font-semibold text-indigo-400">📘 Java Programming Basics</h2>
+        <p class="text-gray-300 mt-2">Learn Java from scratch with interactive coding exercises.</p>
+        <a href="#" class="inline-block mt-4 text-yellow-400 hover:underline">View Resource</a>
+      </div>
+
+      <div class="p-6 rounded-xl bg-white/10 backdrop-blur-lg border border-white/20">
+        <h2 class="font-semibold text-indigo-400">🎥 Python for Data Science</h2>
+        <p class="text-gray-300 mt-2">Video tutorials on Python libraries like Pandas & NumPy.</p>
+        <a href="#" class="inline-block mt-4 text-yellow-400 hover:underline">Watch Now</a>
+      </div>
+
+      <div class="p-6 rounded-xl bg-white/10 backdrop-blur-lg border border-white/20">
+        <h2 class="font-semibold text-indigo-400">📗 System Design Roadmap</h2>
+        <p class="text-gray-300 mt-2">Step-by-step roadmap to prepare for system design interviews.</p>
+        <a href="#" class="inline-block mt-4 text-yellow-400 hover:underline">Explore</a>
+      </div>
+    </div>
+  </main>
+
+  <footer class="bg-white/5 backdrop-blur-xl border-t border-white/20 text-center py-4 text-gray-400 text-sm">
+    © 2025 SkillSync. All rights reserved.
+  </footer>
+</body>
+</html>
+

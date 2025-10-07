@@ -1,47 +1,103 @@
-{% extends "base.html" %}
-{% block content %}
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>SkillSync – AI Career Guide</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+      body {
+        background: linear-gradient(-45deg, #1e293b, #334155, #1e293b, #0f172a);
+        background-size: 400% 400%;
+        animation: gradientMove 15s ease infinite;
+      }
+      @keyframes gradientMove {
+        0% {background-position: 0% 50%;}
+        50% {background-position: 100% 50%;}
+        100% {background-position: 0% 50%;}
+      }
+      .glass { backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);}
+    </style>
+  </head>
+  <body class="min-h-screen text-slate-100 flex flex-col">
 
-<!-- Hero Section -->
-<section class="hero-gradient text-center text-white py-20 rounded-3xl shadow-xl mb-10">
-  <h1 class="text-5xl font-extrabold tracking-tight mb-6 animate-float">
-    SkillSync 🚀
-  </h1>
-  <p class="text-xl max-w-2xl mx-auto opacity-90 mb-8">
-    Upskill, Learn & Grow Beyond Just Coding.  
-    Playlists, Jobs, Roadmaps & AI — all in one place.
-  </p>
-  <div class="flex justify-center gap-4">
-    <a href="/playlists" class="btn-hero">📺 Explore Playlists</a>
-    <a href="/agent" class="btn-secondary">🤖 Ask AI Agent</a>
-  </div>
-</section>
+    <!-- NAVBAR -->
+    <header class="sticky top-0 z-50 bg-slate-900/70 glass border-b border-slate-700">
+      <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+        <div class="flex h-16 items-center justify-between">
+          <a href="/" class="flex items-center gap-2 font-extrabold text-2xl sm:text-3xl">
+            <span class="bg-clip-text text-transparent bg-gradient-to-r from-indigo-400 to-pink-400">⚡ SkillSync</span>
+          </a>
+        </div>
+      </div>
+    </header>
 
-<!-- Action Cards -->
-<section class="grid md:grid-cols-3 gap-8">
-  <a href="/playlists" class="action-card text-center">
-    <h3 class="text-xl font-bold mb-2">📺 Curated Playlists</h3>
-    <p class="text-muted-foreground">Learn faster with top-quality YouTube & curated content.</p>
-  </a>
+    <!-- HERO + INPUT -->
+    <main class="flex-grow flex flex-col items-center justify-center px-4">
+      <h1 class="text-4xl sm:text-5xl font-extrabold text-center">
+        🚀 Ask <span class="bg-clip-text text-transparent bg-gradient-to-r from-indigo-400 to-pink-400">Your AI Career Agents</span>
+      </h1>
+      <p class="mt-3 text-slate-300 text-center max-w-xl">One smart box. Five expert AI agents. Just type and let SkillSync decide who should help you.</p>
 
-  <a href="/jobs" class="action-card text-center">
-    <h3 class="text-xl font-bold mb-2">💼 Job Openings</h3>
-    <p class="text-muted-foreground">Find internships & fresher roles from trusted companies.</p>
-  </a>
+      <!-- Input Box -->
+      <div class="mt-8 w-full max-w-2xl">
+        <div class="flex items-center gap-2 bg-slate-800/50 border border-slate-700 rounded-xl p-2">
+          <input id="userInput" type="text" placeholder="Type your question (e.g. 'I want a roadmap for data science')"
+            class="flex-grow bg-transparent outline-none px-3 py-2 text-slate-100 placeholder-slate-400" />
+          <button onclick="askAgent()"
+            class="bg-indigo-500 hover:bg-indigo-600 text-white px-4 py-2 rounded-lg font-medium">Ask</button>
+        </div>
+      </div>
 
-  <a href="/roadmap" class="action-card text-center">
-    <h3 class="text-xl font-bold mb-2">🛣 Career Roadmaps</h3>
-    <p class="text-muted-foreground">Step-by-step guides to land your dream role in tech.</p>
-  </a>
-</section>
+      <!-- Response Box -->
+      <div id="responseBox" class="mt-6 max-w-2xl w-full hidden">
+        <div class="rounded-xl border border-slate-700 bg-slate-800/50 p-4">
+          <h3 id="agentName" class="text-indigo-400 font-semibold mb-2"></h3>
+          <p id="agentResponse" class="text-slate-200"></p>
+        </div>
+      </div>
+    </main>
 
-<!-- AI Assistant Bubble -->
-<section class="mt-16 text-center">
-  <div class="assistant-bubble max-w-2xl mx-auto">
-    <h2 class="text-2xl font-semibold mb-4">🤖 SkillSync AI</h2>
-    <p class="mb-4">Confused about career path or next steps?  
-      Ask our Agentic AI Assistant for personalized guidance!</p>
-    <a href="/agent" class="btn-accent">Try AI Agent</a>
-  </div>
-</section>
+    <!-- FOOTER -->
+    <footer class="py-6 bg-slate-950 text-center text-slate-400 text-sm">
+      SkillSync © 2025
+    </footer>
 
-{% endblock %}
+    <!-- JS -->
+    <script>
+      async function askAgent() {
+        const input = document.getElementById("userInput").value.trim();
+        const responseBox = document.getElementById("responseBox");
+        const agentName = document.getElementById("agentName");
+        const agentResponse = document.getElementById("agentResponse");
+
+        if (!input) {
+          alert("Please enter a question!");
+          return;
+        }
+
+        try {
+          const res = await fetch("/ask", {
+            method: "POST",
+            headers: {"Content-Type": "application/json"},
+            body: JSON.stringify({ query: input })
+          });
+
+          const data = await res.json();
+          if (data.error) {
+            agentName.textContent = "⚠️ Error";
+            agentResponse.textContent = data.error;
+          } else {
+            agentName.textContent = "🤖 " + data.agent.toUpperCase() + " Agent";
+            agentResponse.textContent = data.response;
+          }
+          responseBox.classList.remove("hidden");
+        } catch (err) {
+          agentName.textContent = "⚠️ Error";
+          agentResponse.textContent = "Server not responding. Please try again.";
+          responseBox.classList.remove("hidden");
+        }
+      }
+    </script>
+  </body>
+</html>

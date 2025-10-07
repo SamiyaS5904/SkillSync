@@ -1,17 +1,253 @@
-{% extends "base.html" %}
-{% block content %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>SkillSync • Roadmap Planner</title>
 
-<h2 class="mb-4 text-center">📌 Roadmap</h2>
-<div class="card shadow-lg border-0 rounded-3">
-  <div class="card-body">
-    <ol class="list-group list-group-numbered">
-      {% for step in steps %}
-        <li class="list-group-item d-flex align-items-center">
-          <span class="badge bg-success me-3">Step {{ loop.index }}</span>
-          <span class="fw-semibold">{{ step }}</span>
-        </li>
-      {% endfor %}
-    </ol>
+<script src="https://cdn.tailwindcss.com"></script>
+<link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet" />
+
+<style>
+  .glass { background: linear-gradient(180deg, rgba(255,255,255,.06), rgba(255,255,255,.03));
+           border: 1px solid rgba(255,255,255,.1); backdrop-filter: blur(10px); }
+  .grad-text { background: linear-gradient(to right,#34d399,#60a5fa,#a78bfa); -webkit-background-clip:text; color:transparent;}
+  .tag { border:1px solid rgba(255,255,255,.15); }
+</style>
+</head>
+<body class="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-indigo-950 text-white">
+
+<!-- NAV -->
+<header class="sticky top-0 z-40 border-b border-white/10 bg-black/30 backdrop-blur-md">
+  <div class="max-w-6xl mx-auto px-5 py-4 flex items-center justify-between">
+    <h1 class="text-xl md:text-2xl font-bold grad-text"><i class="fa-solid fa-route mr-2"></i>Roadmap Planner</h1>
+    <nav class="flex items-center gap-5 text-sm">
+      <a class="hover:text-indigo-300" href="{{ url_for('dashboard') }}"><i class="fa-solid fa-gauge-high mr-2"></i>Dashboard</a>
+      <a class="text-rose-400 hover:text-rose-300" href="{{ url_for('logout') }}"><i class="fa-solid fa-right-from-bracket mr-2"></i>Logout</a>
+    </nav>
   </div>
-</div>
-{% endblock %}
+</header>
+
+<main class="max-w-6xl mx-auto px-5 py-8 space-y-8">
+
+  <!-- INPUTS -->
+  <section class="glass rounded-2xl p-6 space-y-6">
+    <h2 class="text-lg font-semibold"><i class="fa-solid fa-sliders mr-2 text-emerald-400"></i><span class="grad-text">Your Preferences</span></h2>
+
+    <div class="grid md:grid-cols-2 gap-5">
+      <div class="space-y-2">
+        <label class="text-sm text-white/80">🎯 Career Goal</label>
+        <input id="goalInput" type="text" placeholder="e.g., Full-Stack Developer, Data Scientist"
+               class="w-full px-4 py-3 rounded-xl bg-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+               value="{{ user.goal if user.goal else '' }}"/>
+      </div>
+
+      <div class="grid grid-cols-2 gap-3">
+        <div>
+          <label class="text-sm text-white/80">🕐 Hours / Day</label>
+          <input id="hoursInput" type="number" min="1" max="12" value="2"
+                 class="w-full px-4 py-3 rounded-xl bg-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-500"/>
+        </div>
+        <div>
+          <label class="text-sm text-white/80">📅 Duration (months)</label>
+          <input id="durationInput" type="number" min="1" max="24" value="3"
+                 class="w-full px-4 py-3 rounded-xl bg-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-500"/>
+        </div>
+      </div>
+
+      <!-- Skills -->
+      <div>
+        <label class="text-sm text-white/80">💪 Add Present Skills (with proficiency)</label>
+        <div class="flex gap-3 mt-1">
+          <input id="skillName" type="text" placeholder="Skill name (e.g., Python)"
+                 class="flex-1 px-4 py-3 rounded-xl bg-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-500"/>
+          <select id="skillLevel" class="px-3 py-3 rounded-xl bg-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-500">
+            <option>Beginner</option>
+            <option>Intermediate</option>
+            <option>Advanced</option>
+          </select>
+          <button id="addSkillBtn" class="px-4 py-3 rounded-xl bg-gradient-to-r from-emerald-500 to-sky-600 hover:opacity-90">
+            <i class="fa-solid fa-plus"></i>
+          </button>
+        </div>
+        <div id="skillsTags" class="mt-3 flex flex-wrap gap-2"></div>
+      </div>
+
+      <!-- Extra -->
+      <div>
+        <label class="text-sm text-white/80">📆 Weekend Extra Hours (optional)</label>
+        <input id="weekendHoursInput" type="number" min="0" max="16" value="0"
+               class="w-full px-4 py-3 rounded-xl bg-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-500"/>
+        <div class="mt-3 flex items-center gap-3">
+          <label class="inline-flex items-center gap-2">
+            <input id="includePlaylists" type="checkbox" class="accent-indigo-500">
+            <span class="text-sm">Include curated playlists</span>
+          </label>
+        </div>
+      </div>
+    </div>
+
+    <button id="generateBtn" class="w-full mt-2 px-6 py-4 rounded-2xl text-lg font-semibold bg-gradient-to-r from-indigo-600 to-fuchsia-600 hover:opacity-95">
+      <i class="fa-solid fa-rocket mr-2"></i>Generate Roadmap
+    </button>
+  </section>
+
+  <!-- ROADMAP RESULT -->
+  <section id="roadmapSpace" class="space-y-6"></section>
+</main>
+
+<script>
+  const skills = []; // {name, level}
+  const skillNameEl   = document.getElementById('skillName');
+  const skillLevelEl  = document.getElementById('skillLevel');
+  const skillsTagsEl  = document.getElementById('skillsTags');
+
+  function renderTags(){
+    skillsTagsEl.innerHTML = '';
+    skills.forEach((s, i)=>{
+      const tag = document.createElement('span');
+      tag.className = 'tag px-3 py-1 rounded-full text-sm bg-white/10';
+      tag.innerHTML = `${s.name} <span class="text-white/60">(${s.level})</span>
+        <button class="ml-2 text-rose-300 hover:text-rose-200" onclick="removeSkill(${i})"><i class="fa-solid fa-xmark"></i></button>`;
+      skillsTagsEl.appendChild(tag);
+    });
+  }
+  function removeSkill(i){ skills.splice(i,1); renderTags(); }
+  document.getElementById('addSkillBtn').addEventListener('click', ()=>{
+    const n = skillNameEl.value.trim(); const l = skillLevelEl.value;
+    if(!n) return;
+    if(skills.some(s=>s.name.toLowerCase()===n.toLowerCase())) return;
+    skills.push({name:n, level:l}); skillNameEl.value=''; renderTags();
+  });
+
+  function toggleMilestone(i){
+    const body = document.getElementById('ms-body-'+i);
+    const chev = document.getElementById('ms-chevron-'+i);
+    body.classList.toggle('hidden');
+    chev.classList.toggle('rotate-180');
+  }
+
+  function renderRoadmap(data){
+    const root = document.getElementById('roadmapSpace');
+    root.innerHTML = '';
+
+    if(!data.roadmap || !data.roadmap.milestones){
+      root.innerHTML = `<div class="glass rounded-2xl p-6 text-amber-300 text-center">No roadmap data returned.</div>`;
+      return;
+    }
+
+    // Header summary
+    root.innerHTML += `
+      <div class="glass rounded-2xl p-6 mb-6">
+        <h3 class="text-2xl font-bold mb-4 grad-text"><i class="fa-solid fa-map-marked-alt mr-2 text-emerald-400"></i>Your Learning Roadmap</h3>
+        <div class="grid md:grid-cols-3 gap-4">
+          <div class="rounded-xl border border-white/10 p-4 text-center">
+            <div class="text-3xl font-extrabold text-emerald-300">${data.roadmap.milestones.length}</div>
+            <div class="text-white/70 text-sm">Milestones</div>
+          </div>
+          <div class="rounded-xl border border-white/10 p-4 text-center">
+            <div class="text-3xl font-extrabold text-sky-300">${data.roadmap.total_duration_weeks || '—'}</div>
+            <div class="text-white/70 text-sm">Weeks</div>
+          </div>
+          <div class="rounded-xl border border-white/10 p-4 text-center">
+            <div class="text-3xl font-extrabold text-fuchsia-300">${data.roadmap.total_hours || '—'}</div>
+            <div class="text-white/70 text-sm">Total Hours</div>
+          </div>
+        </div>
+      </div>`;
+
+    // Milestones
+    data.roadmap.milestones.forEach((m, i)=>{
+      const done = (m.tasks||[]).filter(t=>t.done).length;
+      const total = (m.tasks||[]).length;
+      const pct = total? Math.round((done/total)*100) : 0;
+
+      root.innerHTML += `
+        <div class="glass rounded-2xl overflow-hidden">
+          <div class="p-5">
+            <button class="w-full flex items-center justify-between" onclick="toggleMilestone(${i})">
+              <div>
+                <h4 class="text-xl font-semibold"><i class="fa-solid fa-flag mr-2 text-amber-300"></i>${m.title}</h4>
+                <p class="text-white/60 text-sm mt-1">${m.duration_days || (m.duration_weeks? (m.duration_weeks*7+' days') : '')}</p>
+              </div>
+              <div class="flex items-center gap-4">
+                <div class="w-28">
+                  <div class="text-right text-xs text-white/60 mb-1">${pct}%</div>
+                  <div class="h-2 w-full bg-white/10 rounded-full">
+                    <div class="h-2 bg-gradient-to-r from-emerald-400 to-sky-400 rounded-full" style="width:${pct}%"></div>
+                  </div>
+                </div>
+                <i id="ms-chevron-${i}" class="fa-solid fa-chevron-down text-white/70 transition-transform"></i>
+              </div>
+            </button>
+
+            <div id="ms-body-${i}" class="hidden mt-5 space-y-3">
+              ${(m.tasks||[]).map((t, j)=>`
+                <div class="rounded-xl border border-white/10 p-4">
+                  <label class="flex items-start gap-3 cursor-pointer">
+                    <input type="checkbox" ${t.done?'checked':''}
+                      onchange="updateTask(${i},${j},this.checked)"
+                      class="mt-1 accent-emerald-500">
+                    <div>
+                      <div class="font-medium ${t.done?'line-through text-white/60':''}">${t.title}</div>
+                      <div class="text-xs text-white/60 mt-1"><i class="fa-regular fa-clock mr-1"></i>${t.hours||0}h</div>
+                    </div>
+                  </label>
+                </div>`).join('')}
+            </div>
+          </div>
+        </div>`;
+    });
+  }
+
+  async function updateTask(mIndex, tIndex, done){
+    try{
+      await fetch('/update_task',{
+        method:'POST', headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({ milestone_index:mIndex, task_index:tIndex, done })
+      });
+    }catch(e){}
+  }
+
+  document.getElementById('generateBtn').addEventListener('click', async ()=>{
+    const goal      = document.getElementById('goalInput').value.trim();
+    const hours     = parseInt(document.getElementById('hoursInput').value)||2;
+    const months    = parseInt(document.getElementById('durationInput').value)||3;
+    const weekend   = parseInt(document.getElementById('weekendHoursInput').value)||0;
+    const playlists = document.getElementById('includePlaylists').checked;
+
+    if(!goal){ alert('Please enter a career goal.'); return; }
+
+    const box = document.getElementById('roadmapSpace');
+    box.innerHTML = `<div class="glass rounded-2xl p-6 text-center text-white/80"><i class="fa-solid fa-spinner fa-spin mr-2"></i>Generating your personalized roadmap...</div>`;
+
+    try{
+      const res = await fetch('/orchestrate',{
+        method:'POST', headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({
+          goal,
+          skills: skills.map(s => `${s.name} (${s.level})`),
+          hours,
+          duration_months: months,
+          weekend_hours: weekend,
+          include_playlists: playlists,
+          skills_detail: skills
+        })
+      });
+      const data = await res.json();
+      if(data.error){ box.innerHTML = `<div class="glass rounded-2xl p-6 text-center text-rose-300">${data.error}</div>`; return; }
+      renderRoadmap(data);
+      window.scrollTo({ top: document.getElementById('roadmapSpace').offsetTop - 20, behavior:'smooth' });
+    }catch(e){
+      box.innerHTML = `<div class="glass rounded-2xl p-6 text-center text-rose-300">Error generating roadmap.</div>`;
+    }
+  });
+
+  // Autofocus on goal if empty
+  (function(){
+    const g = document.getElementById('goalInput').value.trim();
+    if(!g) document.getElementById('goalInput').focus();
+  })();
+</script>
+</body>
+</html>
