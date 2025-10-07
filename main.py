@@ -8,7 +8,7 @@ import json
 # MongoDB helper
 from mongodb_helper import MongoDBHelper
 # Crew orchestrator
-from Project.loader import SkillSyncCrew
+from loader import SkillSyncCrew
 
 # Load env
 load_dotenv()
