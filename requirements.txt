@@ -51,6 +51,7 @@ googleapis-common-protos==1.70.0
 gptcache==0.1.44
 greenlet==3.2.4
 grpcio==1.74.0
+gunicorn
 h11==0.16.0
 h2==4.3.0
 hpack==4.1.0
