@@ -4,20 +4,20 @@ import datetime
 import uuid
 import os
 
-
 class MongoDBHelper:
     def __init__(self):
-        """
-        Initialize MongoDB connection.
-        Move sensitive credentials to environment variables in production.
-        """
+        # 🟢 FIX: Load URI from environment variable
+        MONGO_URI = os.getenv("MONGO_URI") 
+        if not MONGO_URI:
+            raise EnvironmentError("MONGO_URI environment variable not set.")
+            
         self.client = MongoClient(
-            "mongodb+srv://connectsamiya5904:samiya2025@cluster0.45dsjs4.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0",
+            MONGO_URI, # 🟢 USE THE VARIABLE HERE
             server_api=ServerApi('1')
         )
-        self.db = None
-        self.collection = None
-        print('[MongoDBHelper] ✅ Connection Created')
+
+        
+            
 
     def select_db(self, db_name='SkillSyncDB', collection='playlists'):
         """

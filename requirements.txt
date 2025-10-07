@@ -37,7 +37,6 @@ dnspython==2.7.0
 docker==7.1.0
 docstring_parser==0.17.0
 durationpy==0.10
-embedchain==0.1.128
 et_xmlfile==2.0.0
 executing==2.2.0
 fastapi==0.116.1
