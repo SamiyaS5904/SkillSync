@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>SkillSync - Admin Dashboard</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+    <style>
+      body { background: linear-gradient(120deg,#071028 0%, #0b1220 50%, #111827 100%); }
+      .glass { backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); }
+    </style>
+</head>
+<body class="min-h-screen text-slate-100">
+
+  <header class="sticky top-0 z-40 border-b border-white/10 bg-black/30 backdrop-blur-md">
+    <div class="max-w-7xl mx-auto px-5 py-4 flex items-center justify-between">
+      <h1 class="text-xl md:text-2xl font-bold text-indigo-400"><i class="fa-solid fa-screwdriver-wrench mr-2"></i>Admin Panel</h1>
+      <nav class="flex items-center gap-5 text-sm">
+        <a class="hover:text-indigo-300" href="{{ url_for('dashboard') }}"><i class="fa-solid fa-gauge-high mr-2"></i>User Dashboard</a>
+        <a class="text-rose-400 hover:text-rose-300" href="{{ url_for('logout') }}"><i class="fa-solid fa-right-from-bracket mr-2"></i>Logout</a>
+      </nav>
+    </div>
+  </header>
+
+  <main class="max-w-7xl mx-auto px-5 py-8 space-y-8">
+    <h2 class="text-3xl font-extrabold text-white">System Overview</h2>
+
+    <div class="grid md:grid-cols-3 gap-6">
+      <div class="glass bg-slate-800/50 border border-slate-700 rounded-2xl p-6 shadow">
+        <div class="text-sm font-medium text-slate-400">Total Registered Users</div>
+        <div class="text-4xl font-bold text-indigo-300 mt-2">{{ total_users }}</div>
+      </div>
+      <div class="glass bg-slate-800/50 border border-slate-700 rounded-2xl p-6 shadow">
+        <div class="text-sm font-medium text-slate-400">Onboarded Users (with Roadmap)</div>
+        <div class="text-4xl font-bold text-emerald-300 mt-2">{{ onboarded_users }}</div>
+      </div>
+      <div class="glass bg-slate-800/50 border border-slate-700 rounded-2xl p-6 shadow">
+        <div class="text-sm font-medium text-slate-400">Conversion Rate</div>
+        <div class="text-4xl font-bold text-fuchsia-300 mt-2">{{ '{:.1f}%'.format((onboarded_users / total_users) * 100) if total_users > 0 else '0.0%' }}</div>
+      </div>
+    </div>
+
+    <section class="glass bg-slate-800/50 border border-slate-700 rounded-2xl p-6 shadow">
+      <h3 class="text-xl font-semibold mb-4">Recent Signups</h3>
+      <table class="min-w-full text-left text-sm text-slate-300">
+        <thead class="border-b border-slate-700">
+          <tr>
+            <th scope="col" class="py-3 px-2 font-medium">Name</th>
+            <th scope="col" class="py-3 px-2 font-medium">Email</th>
+            <th scope="col" class="py-3 px-2 font-medium">Registered On</th>
+            <th scope="col" class="py-3 px-2 font-medium">Admin</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for user in recent_users %}
+          <tr class="border-b border-slate-800 last:border-b-0 hover:bg-slate-700/50">
+            <td class="py-3 px-2">{{ user.name }}</td>
+            <td class="py-3 px-2">{{ user.email }}</td>
+            <td class="py-3 px-2">{{ user.created_at.strftime('%Y-%m-%d %H:%M') }}</td>
+            <td class="py-3 px-2">
+              {% if user.get('is_admin') %}
+                <span class="text-emerald-400"><i class="fa-solid fa-check"></i></span>
+              {% else %}
+                <span class="text-rose-400"><i class="fa-solid fa-times"></i></span>
+              {% endif %}
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </section>
+
+  </main>
+
+  <footer class="py-6 text-center text-slate-500 text-sm border-t border-slate-700 mt-8">© 2025 Skill Sync Admin</footer>
+
+</body>
+</html>

@@ -17,18 +17,18 @@ agents:
       - Keep tone **clear, concise, motivational**
       - Add line breaks between sections
     tools:
-      - web_search
-      - roadmap_generator
+      - Web Search Tool # Updated tool name
+      - Roadmap Structure Tool # Updated tool name
 
   - id: learning_coach
-    role: "Learning Strategist"
+    role: "Learning Strategist and Planner" # Clarified role
     goal: >
       Create personalized learning roadmaps that break skills into milestones,
-      recommend resources, and adapt plans to the user’s available time.
+      recommend resources, generate daily plans, and adapt plans to the user’s available time.
     backstory: >
       You are a passionate educator who simplifies complex concepts into
       achievable steps. You balance theory, practice, and real-world projects,
-      ensuring learners also build portfolios.
+      ensuring learners also build portfolios. You are also an expert in time management.
     style: |
       - Always use **Markdown**
       - Use **## Milestones** for each phase
@@ -37,8 +37,9 @@ agents:
       - Highlight important skills in **bold**
       - End with a **motivational note**
     tools:
-      - roadmap_generator
-      - playlist_recommender
+      - Roadmap Structure Tool # Updated tool name
+      - Playlist Planner Tool # Updated tool name
+      - Web Search Tool # Added for general resource finding
 
   - id: job_advisor
     role: "Job Advisor"
@@ -56,5 +57,4 @@ agents:
       - Highlight keywords in **bold**
       - Keep tone **professional but friendly**
     tools:
-      - job_scraper
-      - resume_analyzer
+      - Web Search Tool # Placeholder for job_scraper/resume_analyzer tools

@@ -1,14 +1,14 @@
 tasks:
   - id: career_path_task
     description: >
-      Analyze the user’s career goal (e.g., “I want to become an AI Engineer”).
-      Suggest realistic career paths, required skills, certifications, and a motivational message.
-      Output should always be **structured JSON + clear Markdown notes**.
+      Analyze the user’s career goal and existing skills to identify required skills,
+      suggest realistic career paths, and provide a motivational message.
+      **Output must be a structured JSON object only.**
     expected_output: >
       JSON:
       {
         "career_paths": [ "path 1", "path 2" ],
-        "required_skills": [ "skill1", "skill2" ],
+        "required_skills_gaps": [ "missing_skill1", "missing_skill2" ],
         "certifications": [ "cert1", "cert2" ],
         "motivational_message": "short inspiring note"
       }
@@ -16,38 +16,57 @@ tasks:
 
   - id: roadmap_task
     description: >
-      Based on the chosen career and user constraints (hours per day, total months),
-      generate a **detailed learning roadmap** with milestones, weekly goals,
-      project ideas, and a timeline overview.
-      Output must be structured and in **Markdown**.
+      Based on the required skills and user constraints (hours per day, total months, and the
+      output from the career_path_task), generate a detailed learning roadmap
+      with 3-5 milestones, weekly goals, project ideas, and a timeline overview.
+      Output must be structured and in **JSON format only** for database storage.
     expected_output: >
       JSON:
       {
-        "milestones": [{ "title": "", "duration_weeks": 0, "description": "" }],
+        "milestones": [{ "title": "", "duration_weeks": 0, "description": "", "tasks": ["task 1", "task 2"] }],
         "weekly_goals": [ "goal1", "goal2" ],
         "projects": [ "project idea 1", "project idea 2" ],
         "timeline_overview": "short summary"
       }
     agent: learning_coach
 
-  - id: playlist_task
+  - id: daily_plan_task # NEW TASK
     description: >
-      For each skill in the roadmap, recommend curated learning resources
-      (e.g., YouTube, MOOCs, GitHub repos, blogs, books).
-      Each resource should have a clear title, type, link, and short description.
+      Generate a granular daily learning plan for one week, starting from the specified date.
+      Break down the roadmap tasks into specific time slots, respecting the user's
+      daily and weekend hour constraints. Include 2 recommended video playlists.
+      **Output must be a structured JSON object only.**
     expected_output: >
       JSON:
       {
-        "resources": [
-          { "skill": "Python", "title": "Python for Everybody", "type": "Course", "link": "URL", "short_description": "Beginner-friendly" }
+        "plan": [
+          { "date": "YYYY-MM-DD", "time": "HH:MM", "title": "Task Title", "duration": 30 }
+        ],
+        "playlists": [
+          { "title": "Playlist Title", "provider": "YouTube", "url": "URL" }
         ]
+      }
+    agent: learning_coach
+
+  - id: playlist_scheduling_task # NEW TASK
+    description: >
+      Use the Playlist Planner Tool to analyze the provided playlist URL. Create a detailed,
+      date-stamped schedule for viewing all videos, respecting the user's daily hour commitment.
+      **Output must be a structured JSON object only.**
+    expected_output: >
+      JSON:
+      {
+        "schedule": [
+          { "date": "YYYY-MM-DD", "video_title": "Video Title", "time_needed_minutes": 45, "url": "Video URL" }
+        ],
+        "schedule_summary": "Total viewing time and number of days required."
       }
     agent: learning_coach
 
   - id: job_search_task
     description: >
-      Recommend job listings (scraped or mocked if needed) that match the user’s
-      roadmap skills. Highlight missing skills for each role. Output should be
+      Recommend relevant job listings (use Web Search Tool for up-to-date data) that match the user’s
+      roadmap skills. Highlight the missing skills needed for each role. Output should be
       **Markdown with clear headings and JSON structure**.
     expected_output: >
       JSON:
@@ -66,7 +85,7 @@ tasks:
       JSON:
       {
         "questions": [
-          { "question": "What is overfitting?", "difficulty_level": "Easy" }
+          { "question": "What is X?", "difficulty_level": "Easy" }
         ]
       }
     agent: job_advisor

@@ -29,45 +29,40 @@
 
     <!-- ONBOARDING -->
     <section id="onboardSection" class="glass bg-slate-800/50 border border-slate-700 rounded-2xl p-6 shadow">
-      <form id="onboardForm" class="space-y-4">
-        <div class="grid sm:grid-cols-2 gap-4">
-          <div>
-            <label class="block text-sm font-medium mb-2">Career Goal</label>
-            <input id="goal" required class="w-full px-3 py-2 rounded-lg bg-slate-900/50 border border-slate-700" placeholder="e.g. Software Engineer, ML Engineer" />
-          </div>
-          <div>
-            <label class="block text-sm font-medium mb-2">Long-term goal</label>
-            <input id="longGoal" class="w-full px-3 py-2 rounded-lg bg-slate-900/50 border border-slate-700" placeholder="e.g. FAANG job, build startup" />
-          </div>
-        </div>
+  <form id="onboardForm" class="space-y-4">
+    <div class="grid sm:grid-cols-2 gap-4">
+      <div>
+        <label class="block text-sm font-medium mb-2">Career Goal (Your Long-term Goal)</label>
+        <input id="goal" required class="w-full px-3 py-2 rounded-lg bg-slate-900/50 border border-slate-700" placeholder="e.g. AI Engineer, Software Architect" />
+      </div>
+      <div>
+        <label class="block text-sm font-medium mb-2">Start Date for Daily Plan</label>
+        <input id="startDate" type="date" class="w-full px-3 py-2 rounded-lg bg-slate-900/50 border border-slate-700" value="{{ new Date().toISOString().slice(0,10) }}" required />
+      </div>
+    </div>
 
-        <div>
-          <label class="block text-sm font-medium mb-2">Current skills (comma separated)</label>
-          <input id="skills" class="w-full px-3 py-2 rounded-lg bg-slate-900/50 border border-slate-700" placeholder="Python, HTML, Data Structures" />
-        </div>
+    <div>
+      <label class="block text-sm font-medium mb-2">Present Skills & Tools (List with proficiency and projects, e.g., Python (Intermediate), Project Management (Yes), VS Code, 2 Completed Projects)</label>
+      <textarea id="skills" rows="3" class="w-full px-3 py-2 rounded-lg bg-slate-900/50 border border-slate-700" placeholder="Python (Intermediate), Django (Beginner), Docker, Data Structures (Basic), 1 Project Done" required></textarea>
+    </div>
 
-        <div class="grid sm:grid-cols-3 gap-4">
-          <div>
-            <label class="block text-sm font-medium mb-2">Hours / weekday</label>
-            <input id="hoursDay" type="number" min="0" class="w-full px-3 py-2 rounded-lg bg-slate-900/50 border border-slate-700" placeholder="e.g. 2" required />
-          </div>
-          <div>
-            <label class="block text-sm font-medium mb-2">Hours / weekend day</label>
-            <input id="hoursWeekend" type="number" min="0" class="w-full px-3 py-2 rounded-lg bg-slate-900/50 border border-slate-700" placeholder="e.g. 4" />
-          </div>
-          <div>
-            <label class="block text-sm font-medium mb-2">Start date</label>
-            <input id="startDate" type="date" class="w-full px-3 py-2 rounded-lg bg-slate-900/50 border border-slate-700" />
-          </div>
-        </div>
+    <div class="grid sm:grid-cols-2 gap-4">
+      <div>
+        <label class="block text-sm font-medium mb-2">Hours / weekday</label>
+        <input id="hoursDay" type="number" min="0" class="w-full px-3 py-2 rounded-lg bg-slate-900/50 border border-slate-700" placeholder="e.g. 2" required />
+      </div>
+      <div>
+        <label class="block text-sm font-medium mb-2">Hours / weekend day</label>
+        <input id="hoursWeekend" type="number" min="0" class="w-full px-3 py-2 rounded-lg bg-slate-900/50 border border-slate-700" placeholder="e.g. 4" />
+      </div>
+    </div>
 
-        <div class="flex gap-3 mt-2">
-          <button type="submit" class="px-4 py-2 rounded-lg bg-gradient-to-r from-indigo-500 to-fuchsia-600">Save & Continue</button>
-          <button type="button" id="demoFill" class="px-4 py-2 rounded-lg bg-slate-700">Fill demo</button>
-        </div>
-      </form>
-    </section>
-
+    <div class="flex gap-3 mt-2">
+      <button type="submit" class="px-4 py-2 rounded-lg bg-gradient-to-r from-indigo-500 to-fuchsia-600">Save & Continue</button>
+      <button type="button" id="demoFill" class="px-4 py-2 rounded-lg bg-slate-700">Fill demo</button>
+    </div>
+  </form>
+</section>
     <!-- DASHBOARD (hidden until onboarding completed) -->
     <section id="dashboard" class="hidden space-y-6">
 
@@ -270,6 +265,26 @@
       saveLS(LS_KEYS.progress, arr); if(progressChart){ progressChart.data.datasets[0].data = arr; progressChart.update(); }
     }
 
+<div class="glass bg-slate-800/50 border border-slate-700 rounded-2xl p-6">
+  <h3 class="font-semibold text-xl mb-4">Playlist Planner Agent 🤖</h3>
+  <p class="text-slate-400 mb-4">Paste a video playlist link (e.g., YouTube) and we'll create a daily viewing schedule based on your time commitment.</p>
+  <form id="playlistPlanForm" class="space-y-4">
+    <div>
+      <label class="block text-sm font-medium mb-2">Playlist URL</label>
+      <input id="playlistUrl" type="url" required class="w-full px-3 py-2 rounded-lg bg-slate-900/50 border border-slate-700" placeholder="https://www.youtube.com/playlist?list=..." />
+    </div>
+    <div>
+      <label class="block text-sm font-medium mb-2">Daily Commitment (Total Hours)</label>
+      <input id="dailyHours" type="number" min="0.5" step="0.5" required class="w-full px-3 py-2 rounded-lg bg-slate-900/50 border border-slate-700" placeholder="e.g. 1.5" />
+    </div>
+    <button type="submit" id="generatePlaylistPlanBtn" class="w-full py-2 rounded-lg bg-gradient-to-r from-pink-500 to-red-600">Generate Viewing Schedule</button>
+  </form>
+
+  <div id="playlistScheduleArea" class="mt-6 space-y-3 border-t border-slate-700 pt-4">
+      <h4 class="font-medium text-slate-300">Generated Schedule:</h4>
+      </div>
+</div>
+
     /* ---------- Streak Logic ---------- */
     function getToday(){ return new Date().toISOString().slice(0,10); }
     function initStreak(){ const s = readLS(LS_KEYS.streak) || {count:0, last: null}; document.getElementById('streakBadge').innerText = s.count; document.getElementById('lastComplete').innerText = s.last?('Last complete: '+s.last):''; }
@@ -295,6 +310,53 @@
       renderRoadmap(mock);
       saveLS(LS_KEYS.roadmap,mock);
     }
+
+/* ---------- Playlist Planner Logic ---------- */
+function renderPlaylistSchedule(schedule){
+  const area = document.getElementById('playlistScheduleArea');
+  area.innerHTML = '<h4 class="font-medium text-slate-300">Generated Schedule:</h4>';
+  if(schedule.length === 0) {
+    area.innerHTML += '<p class="text-slate-400 mt-2">No schedule generated or an error occurred.</p>';
+    return;
+  }
+  schedule.forEach(item => {
+    const div = document.createElement('div');
+    div.className = 'p-3 rounded-md bg-slate-900/40';
+    div.innerHTML = `<a href="${item.url}" target="_blank" class="font-medium text-indigo-400 hover:text-indigo-300 block">${item.video_title}</a>
+                     <div class="text-sm text-slate-400 mt-1">
+                        <i class="fa-solid fa-calendar-alt mr-1"></i> ${item.date}
+                        <span class="ml-4"><i class="fa-regular fa-clock mr-1"></i> ${item.time_needed_minutes} mins</span>
+                     </div>`;
+    area.appendChild(div);
+  });
+}
+
+const playlistPlanForm = document.getElementById('playlistPlanForm');
+playlistPlanForm.addEventListener('submit', async (e)=>{
+  e.preventDefault();
+  const url = document.getElementById('playlistUrl').value.trim();
+  const hours = document.getElementById('dailyHours').value;
+  const btn = document.getElementById('generatePlaylistPlanBtn');
+
+  btn.disabled = true; btn.innerText = 'Generating Schedule...';
+  try{
+    const res = await fetch('/api/generate-playlist-plan', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({ playlistUrl: url, dailyHours: hours })
+    });
+    const json = await res.json();
+    if(res.ok && json.schedule){
+      renderPlaylistSchedule(json.schedule);
+    } else {
+      renderPlaylistSchedule([]);
+      showToast('Error: ' + (json.error || 'Failed to generate schedule.'));
+    }
+  }catch(e){
+    showToast('Network Error generating playlist plan.');
+  } finally {
+    btn.disabled = false; btn.innerText='Generate Viewing Schedule';
+  }
+});
 
     async function generateDailyPlan(forceMock=false){
       const onboard = readLS(LS_KEYS.onboarding);
