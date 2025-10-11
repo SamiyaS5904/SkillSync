@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>SkillSync - Start Your Journey</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+    <style>
+        body { background: linear-gradient(120deg,#071028 0%, #0b1220 50%, #111827 100%); }
+        .onboarding-card { 
+            max-width: 800px; 
+            margin-top: 5vh;
+            background: rgba(255, 255, 255, 0.05); 
+            backdrop-filter: blur(10px); 
+            border: 1px solid rgba(255, 255, 255, 0.1); 
+            border-radius: 16px; 
+        }
+        input, select { background: rgba(0, 0, 0, 0.2); border: 1px solid #374151; }
+    </style>
+</head>
+<body class="min-h-screen text-slate-100 flex justify-center">
+
+    <div class="onboarding-card p-8 shadow-2xl">
+        <h1 class="text-3xl font-extrabold bg-clip-text text-transparent bg-gradient-to-r from-indigo-400 to-pink-400 mb-2">
+            Define Your Mission
+        </h1>
+        <p class="text-slate-400 mb-8">Let our agents know your goals to generate a personalized, accurate roadmap.</p>
+
+        <form id="onboardingForm" class="space-y-6">
+            <div class="grid sm:grid-cols-2 gap-6">
+                <div>
+                    <label class="block text-sm font-medium mb-2"><i class="fa-solid fa-star mr-1"></i> Long-Term Career Goal</label>
+                    <input id="goal" required class="w-full px-4 py-3 rounded-lg" placeholder="e.g. AI Engineer, Data Scientist" />
+                </div>
+                <div>
+                    <label class="block text-sm font-medium mb-2"><i class="fa-solid fa-calendar-day mr-1"></i> Current Stage</label>
+                    <select id="collegeYear" required class="w-full px-4 py-3 rounded-lg">
+                        <option value="">Select Your Stage</option>
+                        <option value="First Year">First Year (College)</option>
+                        <option value="Second Year">Second Year (College)</option>
+                        <option value="Third Year">Third Year (College)</option>
+                        <option value="Fourth Year+">Fourth Year / Graduate</option>
+                        <option value="Professional">Working Professional</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="grid sm:grid-cols-3 gap-6">
+                 <div>
+                    <label class="block text-sm font-medium mb-2"><i class="fa-solid fa-clock mr-1"></i> Hours / Weekday</label>
+                    <input id="hoursDay" type="number" min="1" class="w-full px-4 py-3 rounded-lg" value="2" required />
+                </div>
+                <div>
+                    <label class="block text-sm font-medium mb-2">Hours / Weekend Day</label>
+                    <input id="hoursWeekend" type="number" min="0" class="w-full px-4 py-3 rounded-lg" value="4" />
+                </div>
+                <div>
+                    <label class="block text-sm font-medium mb-2">Target Duration (Months)</label>
+                    <input id="durationMonths" type="number" min="1" class="w-full px-4 py-3 rounded-lg" value="3" required />
+                </div>
+            </div>
+
+
+            <div class="border border-slate-700/50 p-4 rounded-xl">
+                <label class="block text-lg font-medium mb-3">Your Current Skillset</label>
+                <div class="flex gap-3 mt-1">
+                    <input id="skillName" type="text" placeholder="Skill name (e.g., Python, SQL)" class="flex-1 px-3 py-2 rounded-lg" />
+                    <select id="skillLevel" class="px-3 py-2 rounded-lg">
+                        <option>Beginner</option>
+                        <option>Intermediate</option>
+                        <option>Advanced</option>
+                    </select>
+                    <button type="button" id="addSkillBtn" class="px-4 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-700"><i class="fa-solid fa-plus mr-1"></i> Add Skill</button>
+                </div>
+                <div id="skillsTags" class="mt-4 flex flex-wrap gap-2 min-h-[40px]">
+                    </div>
+            </div>
+            
+            <div class="text-center pt-4">
+                <button type="submit" id="submitOnboarding" class="w-full sm:w-1/2 py-3 rounded-lg text-lg font-bold bg-gradient-to-r from-emerald-500 to-teal-600 hover:opacity-90">
+                    Generate My AI Roadmap
+                </button>
+            </div>
+        </form>
+
+        <p id="loadingMessage" class="text-center text-slate-300 mt-4 hidden">
+            <i class="fa-solid fa-spinner fa-spin mr-2"></i> Analyzing {goal} and generating personalized roadmap...
+        </p>
+    </div>
+
+
+<script>
+    // --- Helper Functions ---
+    const skills = [];
+    const loadingMessage = document.getElementById('loadingMessage');
+    const onboardForm = document.getElementById('onboardingForm');
+    const skillNameEl = document.getElementById('skillName');
+    const skillLevelEl = document.getElementById('skillLevel');
+    const skillsTagsEl = document.getElementById('skillsTags');
+    
+    function renderTags(){
+      skillsTagsEl.innerHTML = '';
+      skills.forEach((s, i)=>{
+        const tag = document.createElement('span');
+        tag.className = 'px-3 py-1 rounded-full text-sm bg-indigo-800 border border-indigo-700 flex items-center gap-2';
+        tag.innerHTML = `${s.name} <span class="text-white/60">(${s.level})</span>
+          <button type="button" class="text-rose-300 hover:text-rose-200 ml-2" onclick="removeSkill(${i})"><i class="fa-solid fa-xmark"></i></button>`;
+        skillsTagsEl.appendChild(tag);
+      });
+    }
+
+    function removeSkill(i){ skills.splice(i,1); renderTags(); }
+
+    document.getElementById('addSkillBtn').addEventListener('click', ()=>{
+      const n = skillNameEl.value.trim(); 
+      const l = skillLevelEl.value;
+      if(!n) return;
+      if(skills.some(s=>s.name.toLowerCase()===n.toLowerCase())) return;
+      skills.push({name:n, level:l}); 
+      skillNameEl.value=''; 
+      renderTags();
+    });
+
+    // --- Form Submission Logic ---
+    onboardForm.addEventListener('submit', async (e)=>{
+        e.preventDefault();
+
+        if (skills.length === 0) {
+            alert('Please add at least one skill to continue.');
+            return;
+        }
+
+        const btn = document.getElementById('submitOnboarding');
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-2"></i> Generating Roadmap...';
+        loadingMessage.classList.remove('hidden');
+
+        const formData = {
+            goal: document.getElementById('goal').value.trim(),
+            college_year: document.getElementById('collegeYear').value,
+            skills: skills.map(s => `${s.name} (${s.level})`), 
+            hours: Number(document.getElementById('hoursDay').value),
+            duration_months: Number(document.getElementById('durationMonths').value),
+        };
+
+        try {
+            const response = await fetch('/submit_onboarding', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(formData)
+            });
+
+            const result = await response.json();
+
+            if (response.ok && result.success) {
+                window.location.href = '/dashboard';
+            } else {
+                alert(`Error: ${result.message || result.error || 'Failed to generate roadmap.'}`);
+                btn.disabled = false;
+                btn.innerHTML = 'Generate My AI Roadmap';
+                loadingMessage.classList.add('hidden');
+            }
+        } catch (error) {
+            alert('A network error occurred.');
+            btn.disabled = false;
+            btn.innerHTML = 'Generate My AI Roadmap';
+            loadingMessage.classList.add('hidden');
+        }
+    });
+</script>
+</body>
+</html>

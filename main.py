@@ -200,16 +200,18 @@ def dashboard():
     user_doc = mongo.collection.find_one({"email": session["user"]})
     if not user_doc:
         return redirect(url_for("home"))
-    
+        
+    # NEW REDIRECTION LOGIC: If no goal is set, redirect to onboarding page
+    if not user_doc.get("goal"):
+         return redirect(url_for("onboarding"))
+         
+    # ... (Rest of dashboard function remains the same, passing context to dashboard.html) ...
     overall_progress, milestone_progress = calculate_progress(user_doc.get("roadmap"))
     
-    # Extract missing skills for the interactive area
     missing_skills = []
     if user_doc.get("roadmap") and user_doc["roadmap"].get("result"):
         try:
-            # The crew result is a string, so we must parse it to get the analysis data
             roadmap_json = json.loads(user_doc["roadmap"].get("result"))
-            # Assuming the structure is result -> analysis -> missing_skills
             missing_skills = roadmap_json.get("analysis", {}).get("missing_skills", [])
         except Exception:
             missing_skills = ["Check Roadmap"] 
@@ -217,9 +219,7 @@ def dashboard():
     return render_template("dashboard.html", user=user_doc,
                            overall_progress=overall_progress,
                            milestone_progress=milestone_progress,
-                           missing_skills=missing_skills) # Pass missing skills to dashboard
-
-
+                           missing_skills=missing_skills)
 # ... (agent_auto, orchestrate, api_generate_roadmap, api_generate_plan routes remain the same) ...
 
 @app.route("/api/generate-plan", methods=["POST"])
@@ -309,7 +309,53 @@ def api_get_readiness():
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
+@app.route("/onboarding", methods=["GET"])
+def onboarding():
+    if "user" not in session:
+        return redirect(url_for("home"))
+    user_doc = mongo.collection.find_one({"email": session["user"]})
+    
+    # If goal is already set, redirect to dashboard
+    if user_doc.get("goal"):
+         return redirect(url_for("dashboard"))
+         
+    return render_template("onboarding_form.html")
 
+
+@app.route("/submit_onboarding", methods=["POST"])
+def submit_onboarding():
+    if "user" not in session:
+        return jsonify({"error": "Unauthorized"}), 401
+    
+    data = request.get_json(force=True)
+    goal = data.get("goal")
+    college_year = data.get("college_year") # NEW FIELD
+    skills = data.get("skills", [])
+    hours = int(data.get("hours", 2))
+    duration = int(data.get("duration_months", 3))
+
+    if not all([goal, college_year, skills]):
+         return jsonify({"error": "Missing required fields."}), 400
+         
+    try:
+        # Call the Crew for initial roadmap generation
+        crew_result = crew.orchestrate(goal, skills, hours, duration, True) # True for weekends
+        roadmap_data = crew_result.get("result", {}) 
+        overall_progress, _ = calculate_progress(roadmap_data)
+        
+        mongo.collection.update_one(
+            {"email": session["user"]},
+            {"$set": {
+                "goal": goal, 
+                "college_year": college_year, # Save new field
+                "roadmap": roadmap_data, 
+                "overall_progress": overall_progress
+            }}
+        )
+        return jsonify({"success": True, "message": "Onboarding complete. Redirecting..."})
+        
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 # -------- NEW: API for Rescheduling Undone Task (Client-side visualization helper) --------
 @app.route("/api/reschedule_task", methods=["POST"])
 def api_reschedule_task():
