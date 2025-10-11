@@ -5,7 +5,6 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Skill Sync - Mentor Dashboard</title>
 
-  <!-- Tailwind + FontAwesome + Chart.js -->
   <script src="https://cdn.tailwindcss.com"></script>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
@@ -15,11 +14,11 @@
     .glass { backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); }
     .task-done { text-decoration: line-through; opacity: .6; }
     .timeline-step { border-left: 3px dashed rgba(255,255,255,0.04); padding-left: 1rem; }
+    .skill-tag { border: 1px solid rgba(255, 255, 255, 0.15); }
   </style>
 </head>
 <body class="min-h-screen text-slate-100 flex flex-col">
 
-  <!-- TOP HERO -->
   <header class="max-w-5xl mx-auto text-center pt-12 px-4">
     <h1 class="text-4xl sm:text-5xl font-extrabold bg-clip-text text-transparent bg-gradient-to-r from-indigo-400 to-pink-400">Your AI Career Mentor</h1>
     <p class="mt-3 text-slate-300">Tell us a bit about you — we will generate a formatted roadmap, daily schedule, playlists and show your progress like a proper SaaS.</p>
@@ -27,49 +26,58 @@
 
   <main class="max-w-5xl mx-auto px-4 py-8 flex-1 space-y-8">
 
-    <!-- ONBOARDING -->
     <section id="onboardSection" class="glass bg-slate-800/50 border border-slate-700 rounded-2xl p-6 shadow">
-  <form id="onboardForm" class="space-y-4">
-    <div class="grid sm:grid-cols-2 gap-4">
-      <div>
-        <label class="block text-sm font-medium mb-2">Career Goal (Your Long-term Goal)</label>
-        <input id="goal" required class="w-full px-3 py-2 rounded-lg bg-slate-900/50 border border-slate-700" placeholder="e.g. AI Engineer, Software Architect" />
-      </div>
-      <div>
-        <label class="block text-sm font-medium mb-2">Start Date for Daily Plan</label>
-        <input id="startDate" type="date" class="w-full px-3 py-2 rounded-lg bg-slate-900/50 border border-slate-700" value="{{ new Date().toISOString().slice(0,10) }}" required />
-      </div>
-    </div>
+      <form id="onboardForm" class="space-y-4">
+        <div class="grid sm:grid-cols-2 gap-4">
+          <div>
+            <label class="block text-sm font-medium mb-2">Career Goal (Your Long-term Goal)</label>
+            <input id="goal" required class="w-full px-3 py-2 rounded-lg bg-slate-900/50 border border-slate-700" placeholder="e.g. AI Engineer, Software Architect" />
+          </div>
+          <div>
+            <label class="block text-sm font-medium mb-2">Start Date for Daily Plan</label>
+            <input id="startDate" type="date" class="w-full px-3 py-2 rounded-lg bg-slate-900/50 border border-slate-700" required />
+          </div>
+        </div>
 
-    <div>
-      <label class="block text-sm font-medium mb-2">Present Skills & Tools (List with proficiency and projects, e.g., Python (Intermediate), Project Management (Yes), VS Code, 2 Completed Projects)</label>
-      <textarea id="skills" rows="3" class="w-full px-3 py-2 rounded-lg bg-slate-900/50 border border-slate-700" placeholder="Python (Intermediate), Django (Beginner), Docker, Data Structures (Basic), 1 Project Done" required></textarea>
-    </div>
+        <div>
+          <label class="block text-sm font-medium mb-2">Present Skills & Proficiency</label>
+          <div class="flex gap-3 mt-1">
+            <input id="skillName" type="text" placeholder="Skill name (e.g., Python)" class="flex-1 px-3 py-2 rounded-lg bg-slate-900/50 border border-slate-700" />
+            <select id="skillLevel" class="px-3 py-2 rounded-lg bg-slate-900/50 border border-slate-700">
+              <option>Beginner</option>
+              <option>Intermediate</option>
+              <option>Advanced</option>
+              <option>Expert</option>
+            </select>
+            <button type="button" id="addSkillBtn" class="px-3 py-2 rounded-lg bg-slate-700 hover:bg-slate-600"><i class="fa-solid fa-plus"></i></button>
+          </div>
+          <div id="skillsTags" class="mt-3 flex flex-wrap gap-2 min-h-[30px] border border-transparent">
+            </div>
+          <input type="hidden" id="structuredSkillsInput" name="skills_json" required>
+        </div>
 
-    <div class="grid sm:grid-cols-2 gap-4">
-      <div>
-        <label class="block text-sm font-medium mb-2">Hours / weekday</label>
-        <input id="hoursDay" type="number" min="0" class="w-full px-3 py-2 rounded-lg bg-slate-900/50 border border-slate-700" placeholder="e.g. 2" required />
-      </div>
-      <div>
-        <label class="block text-sm font-medium mb-2">Hours / weekend day</label>
-        <input id="hoursWeekend" type="number" min="0" class="w-full px-3 py-2 rounded-lg bg-slate-900/50 border border-slate-700" placeholder="e.g. 4" />
-      </div>
-    </div>
+        <div class="grid sm:grid-cols-2 gap-4">
+          <div>
+            <label class="block text-sm font-medium mb-2">Hours / weekday</label>
+            <input id="hoursDay" type="number" min="0" class="w-full px-3 py-2 rounded-lg bg-slate-900/50 border border-slate-700" placeholder="e.g. 2" required />
+          </div>
+          <div>
+            <label class="block text-sm font-medium mb-2">Hours / weekend day</label>
+            <input id="hoursWeekend" type="number" min="0" class="w-full px-3 py-2 rounded-lg bg-slate-900/50 border border-slate-700" placeholder="e.g. 4" />
+          </div>
+        </div>
 
-    <div class="flex gap-3 mt-2">
-      <button type="submit" class="px-4 py-2 rounded-lg bg-gradient-to-r from-indigo-500 to-fuchsia-600">Save & Continue</button>
-      <button type="button" id="demoFill" class="px-4 py-2 rounded-lg bg-slate-700">Fill demo</button>
-    </div>
-  </form>
-</section>
-    <!-- DASHBOARD (hidden until onboarding completed) -->
+        <div class="flex gap-3 mt-2">
+          <button type="submit" class="px-4 py-2 rounded-lg bg-gradient-to-r from-indigo-500 to-fuchsia-600">Save & Continue</button>
+          <button type="button" id="demoFill" class="px-4 py-2 rounded-lg bg-slate-700">Fill demo</button>
+        </div>
+      </form>
+    </section>
+
     <section id="dashboard" class="hidden space-y-6">
 
-      <!-- TOP CTA Row: Roadmap / Plan / Playlists + Streak + Chart -->
       <div class="grid lg:grid-cols-3 gap-6 items-start">
 
-        <!-- Large Card: Roadmap Preview -->
         <div class="glass bg-slate-800/50 border border-slate-700 rounded-2xl p-6 shadow lg:col-span-2">
           <div class="flex items-start justify-between">
             <div>
@@ -83,11 +91,9 @@
           </div>
 
           <div id="roadmapArea" class="mt-6 space-y-4">
-            <!-- Roadmap timeline cards will be inserted here -->
-          </div>
+            </div>
         </div>
 
-        <!-- Right column: Streak + Progress Chart + Quick Actions -->
         <aside class="space-y-4">
           <div class="glass bg-slate-800/50 border border-slate-700 rounded-2xl p-4 text-center">
             <div id="streakBadge" class="mx-auto w-20 h-20 rounded-full border-4 border-indigo-500 flex items-center justify-center text-2xl font-extrabold bg-indigo-500/10">0</div>
@@ -106,27 +112,43 @@
         </aside>
       </div>
 
-      <!-- Daily Schedule + Playlists -->
       <div class="grid lg:grid-cols-2 gap-6">
         <div class="glass bg-slate-800/50 border border-slate-700 rounded-2xl p-6">
           <div class="flex items-center justify-between">
-            <h3 class="font-semibold">Today's Schedule</h3>
+            <h3 class="font-semibold">Today's Schedule (Roadmap Tasks)</h3>
             <div class="text-sm text-slate-400">Auto-saved</div>
           </div>
           <div id="scheduleArea" class="mt-4 space-y-3 timeline-step">
-            <!-- schedule tasks will render here -->
-          </div>
+            </div>
         </div>
 
         <div class="glass bg-slate-800/50 border border-slate-700 rounded-2xl p-6">
           <h3 class="font-semibold">Recommended Playlists</h3>
           <div id="playlistArea" class="mt-4 grid gap-3">
-            <!-- playlist cards -->
-          </div>
+            </div>
         </div>
       </div>
 
-    </section>
+      <div class="glass bg-slate-800/50 border border-slate-700 rounded-2xl p-6">
+        <h3 class="font-semibold text-xl mb-4">Playlist Planner Agent 🤖</h3>
+        <p class="text-slate-400 mb-4">Paste a video playlist link (e.g., YouTube) and we'll create a daily viewing schedule based on your time commitment.</p>
+        <form id="playlistPlanForm" class="space-y-4">
+          <div>
+            <label class="block text-sm font-medium mb-2">Playlist URL</label>
+            <input id="playlistUrl" type="url" required class="w-full px-3 py-2 rounded-lg bg-slate-900/50 border border-slate-700" placeholder="https://www.youtube.com/playlist?list=..." />
+          </div>
+          <div>
+            <label class="block text-sm font-medium mb-2">Daily Commitment (Total Hours)</label>
+            <input id="dailyHours" type="number" min="0.5" step="0.5" required class="w-full px-3 py-2 rounded-lg bg-slate-900/50 border border-slate-700" placeholder="e.g. 1.5" />
+          </div>
+          <button type="submit" id="generatePlaylistPlanBtn" class="w-full py-2 rounded-lg bg-gradient-to-r from-pink-500 to-red-600">Generate Viewing Schedule</button>
+        </form>
+
+        <div id="playlistScheduleArea" class="mt-6 space-y-3 border-t border-slate-700 pt-4">
+            <h4 class="font-medium text-slate-300">Generated Schedule:</h4>
+            </div>
+      </div>
+      </section>
 
   </main>
 
@@ -139,36 +161,81 @@
       plan: 'ss_plan_v1',
       roadmap: 'ss_roadmap_v1',
       progress: 'ss_progress_v1',
-      streak: 'ss_streak_v1'
+      streak: 'ss_streak_v1',
+      playlist_schedule: 'ss_playlist_schedule_v1' // Key for playlist schedule tracking
     };
 
     function saveLS(key, value) { localStorage.setItem(key, JSON.stringify(value)); }
     function readLS(key, fallback=null) { try { const v=localStorage.getItem(key); return v?JSON.parse(v):fallback; } catch(e){return fallback;} }
 
+    /* ---------- Skill Management Logic ---------- */
+    const skills = []; // {name, level}
+    const skillNameEl   = document.getElementById('skillName');
+    const skillLevelEl  = document.getElementById('skillLevel');
+    const skillsTagsEl  = document.getElementById('skillsTags');
+    const structuredSkillsInput = document.getElementById('structuredSkillsInput');
+    
+    function renderTags(){
+      skillsTagsEl.innerHTML = '';
+      skills.forEach((s, i)=>{
+        const tag = document.createElement('span');
+        tag.className = 'px-3 py-1 rounded-full text-sm bg-indigo-800 border border-indigo-700 flex items-center gap-2';
+        tag.innerHTML = `${s.name} <span class="text-white/60">(${s.level})</span>
+          <button type="button" class="text-rose-300 hover:text-rose-200" onclick="removeSkill(${i})"><i class="fa-solid fa-xmark"></i></button>`;
+        skillsTagsEl.appendChild(tag);
+      });
+      // Update hidden input to validate skill submission
+      structuredSkillsInput.value = skills.length > 0 ? 'true' : '';
+    }
+
+    function removeSkill(i){ skills.splice(i,1); renderTags(); }
+
+    document.getElementById('addSkillBtn').addEventListener('click', ()=>{
+      const n = skillNameEl.value.trim(); 
+      const l = skillLevelEl.value;
+      if(!n) return;
+      if(skills.some(s=>s.name.toLowerCase()===n.toLowerCase())) return;
+      skills.push({name:n, level:l}); 
+      skillNameEl.value=''; 
+      renderTags();
+    });
+
     /* ---------- Onboarding Flow ---------- */
     const onboardForm = document.getElementById('onboardForm');
     const onboardSection = document.getElementById('onboardSection');
     const dashboard = document.getElementById('dashboard');
+    
+    // Set default start date to today
+    document.getElementById('startDate').value = new Date().toISOString().slice(0,10);
 
     document.getElementById('demoFill').addEventListener('click', ()=>{
       document.getElementById('goal').value = 'Software Engineer';
-      document.getElementById('skills').value = 'Python, Data Structures, HTML';
-      document.getElementById('longGoal').value = 'Get a SWE job at a good company';
       document.getElementById('hoursDay').value = 2;
       document.getElementById('hoursWeekend').value = 4;
-      document.getElementById('startDate').value = new Date().toISOString().slice(0,10);
+      // Add demo skills to the structured input
+      skills.length = 0;
+      skills.push({name: 'Python', level: 'Intermediate'});
+      skills.push({name: 'HTML', level: 'Advanced'});
+      renderTags();
     });
 
     onboardForm.addEventListener('submit', (e)=>{
       e.preventDefault();
+      
+      if (skills.length === 0) {
+        showToast('Please add at least one skill to continue.');
+        return;
+      }
+      
       const onboarding = {
         goal: document.getElementById('goal').value.trim(),
-        skills: document.getElementById('skills').value.trim(),
-        longGoal: document.getElementById('longGoal').value.trim(),
+        // Pass structured skills as an array of strings to the backend API
+        skills: skills.map(s => `${s.name} (${s.level})`), 
         hoursDay: Number(document.getElementById('hoursDay').value)||0,
         hoursWeekend: Number(document.getElementById('hoursWeekend').value)||0,
         startDate: document.getElementById('startDate').value || new Date().toISOString().slice(0,10)
       };
+      
       saveLS(LS_KEYS.onboarding, onboarding);
       onboardSection.classList.add('hidden');
       dashboard.classList.remove('hidden');
@@ -180,11 +247,12 @@
     });
 
     /* ---------- Mock AI Generators (fallback) ---------- */
+    // NOTE: Mock generators must be updated to handle structured skills if used.
     function mockGenerateRoadmap(onboarding){
-      // create 4-week roadmap based on hours
+      // ... Mock implementation remains ...
       const weeks = [];
       const base = onboarding.hoursDay >= 2 ? 'Practice daily problems' : 'Focus on fundamentals';
-      weeks.push({title:'Week 1 — Foundations', desc:`Learn core topics: ${onboarding.skills || 'Programming basics'}. ${base}`, tasks:['Read basics','Watch intro videos','Try 5 exercises']});
+      weeks.push({title:'Week 1 — Foundations', desc:`Learn core topics: ${onboarding.skills.join(', ') || 'Programming basics'}. ${base}`, tasks:['Read basics','Watch intro videos','Try 5 exercises']});
       weeks.push({title:'Week 2 — Practice', desc:'Start solving problems and small projects', tasks:['Solve 10 easy problems','Build a mini feature']});
       weeks.push({title:'Week 3 — Project', desc:'Build and polish a small project', tasks:['Design project','Implement core features','Write README']});
       weeks.push({title:'Week 4 — Interviews', desc:'Revise and mock interviews', tasks:['Mock interviews','Revise tricky topics']});
@@ -192,15 +260,15 @@
     }
 
     function mockGeneratePlan(onboarding){
-      // break day into chunks
+      // ... Mock implementation remains ...
       const minutes = Math.max(15, onboarding.hoursDay*60 || 60);
       const chunk = Math.floor(minutes/3);
+      const today = new Date().toISOString().slice(0,10);
       const plan = [
-        {time:'00:00', title:`Revise previous topics (${chunk} mins)`, duration:chunk},
-        {time:'00:00', title:`Practice problems (${chunk} mins)`, duration:chunk},
-        {time:'00:00', title:`Watch playlist / course (${minutes - chunk*2} mins)`, duration: minutes - chunk*2}
+        {time:'09:00', title:`Revise previous topics (${chunk} mins)`, duration:chunk, date: today},
+        {time:'10:00', title:`Practice problems (${chunk} mins)`, duration:chunk, date: today},
+        {time:'11:00', title:`Watch playlist / course (${minutes - chunk*2} mins)`, duration: minutes - chunk*2, date: today}
       ];
-      // sample playlists
       const playlists = [
         {title:'DSA Crash Course - 10 videos', provider:'YouTube', url:'#', length:'5 hrs'},
         {title:'System Design Basics', provider:'Playlist', url:'#', length:'3 hrs'}
@@ -228,13 +296,27 @@
       plan.forEach((p, idx)=>{
         const div = document.createElement('div');
         div.className = 'flex items-center gap-3 p-3 rounded-md bg-slate-900/40';
-        div.innerHTML = `<input data-idx="${idx}" type="checkbox" class="task-check w-5 h-5" /> <div class="flex-1"><div class="flex justify-between"><div class="font-medium">${p.title}</div><div class="text-sm text-slate-400">${p.duration} min</div></div><div class="text-sm text-slate-400">${p.note||''}</div></div>`;
+        // Added data-type="daily-plan" and date display
+        div.innerHTML = `<input data-idx="${idx}" data-type="daily-plan" type="checkbox" class="task-check w-5 h-5" /> 
+                         <div class="flex-1">
+                            <div class="flex justify-between">
+                                <div class="font-medium">${p.title}</div>
+                                <div class="text-sm text-slate-400">${p.duration} min</div>
+                            </div>
+                            <div class="text-sm text-slate-400">
+                                <i class="fa-solid fa-calendar-alt mr-1"></i> ${p.date || 'N/A'} 
+                                ${p.note||''}
+                            </div>
+                         </div>`;
         area.appendChild(div);
       });
-      // restore saved
+      // restore saved checks
       const saved = readLS(LS_KEYS.plan) || {};
       if(saved.checks){
-        document.querySelectorAll('.task-check').forEach(ch=>{ const i=parseInt(ch.dataset.idx); if(saved.checks[i]) ch.checked=true; });
+        document.querySelectorAll('.task-check[data-type="daily-plan"]').forEach(ch=>{ 
+          const i=parseInt(ch.dataset.idx); 
+          if(saved.checks[i]) ch.checked=true; 
+        });
       }
     }
 
@@ -243,9 +325,47 @@
       list.forEach(p=>{
         const card = document.createElement('div');
         card.className='p-3 rounded-md bg-slate-900/40 flex items-start gap-3';
-        card.innerHTML = `<div class="flex-1"><div class="font-medium">${p.title}</div><div class="text-sm text-slate-400">${p.provider} • ${p.length||''}</div></div><a href="${p.url||'#'}" class="px-3 py-1 rounded bg-indigo-600">Open</a>`;
+        card.innerHTML = `<div class="flex-1"><div class="font-medium">${p.title}</div><div class="text-sm text-slate-400">${p.provider} • ${p.length||''}</div></div><a href="${p.url||'#'}" class="px-3 py-1 rounded bg-indigo-600" target="_blank">Open</a>`;
         area.appendChild(card);
       });
+    }
+    
+    function renderPlaylistSchedule(data){
+      const area = document.getElementById('playlistScheduleArea');
+      area.innerHTML = '<h4 class="font-medium text-slate-300">Generated Schedule:</h4>';
+
+      if(!data || !data.schedule || data.schedule.length === 0) {
+        area.innerHTML += `<p class="text-slate-400 mt-2">No schedule generated or an error occurred: ${data.error || 'Check the input URL.'}</p>`;
+        return;
+      }
+      
+      data.schedule.forEach((item, idx) => {
+        const div = document.createElement('div');
+        div.className = 'p-3 rounded-md bg-slate-900/40 flex items-start gap-3';
+        // Added checkbox and video link
+        div.innerHTML = `<input data-idx="${idx}" data-type="playlist-plan" type="checkbox" class="task-check w-5 h-5 mt-2" />
+                         <div class="flex-1">
+                            <div class="font-medium">
+                                <a href="${item.url}" target="_blank" class="text-indigo-400 hover:text-indigo-300 block">${item.video_title}</a>
+                            </div>
+                            <div class="text-sm text-slate-400 mt-1">
+                                <i class="fa-solid fa-calendar-alt mr-1"></i> ${item.date}
+                                <span class="ml-4"><i class="fa-regular fa-clock mr-1"></i> ${item.time_needed_minutes} mins</span>
+                            </div>
+                         </div>`;
+        area.appendChild(div);
+      });
+      
+      // Restore saved checks for playlist schedule
+      const saved = readLS(LS_KEYS.playlist_schedule) || {};
+      if(saved.checks){
+        document.querySelectorAll('.task-check[data-type="playlist-plan"]').forEach(ch=>{ 
+          const i=parseInt(ch.dataset.idx); 
+          if(saved.checks[i]) ch.checked=true; 
+        });
+      }
+
+      saveLS(LS_KEYS.playlist_schedule, data);
     }
 
     /* ---------- Chart: Weekly Progress ---------- */
@@ -265,33 +385,30 @@
       saveLS(LS_KEYS.progress, arr); if(progressChart){ progressChart.data.datasets[0].data = arr; progressChart.update(); }
     }
 
-<div class="glass bg-slate-800/50 border border-slate-700 rounded-2xl p-6">
-  <h3 class="font-semibold text-xl mb-4">Playlist Planner Agent 🤖</h3>
-  <p class="text-slate-400 mb-4">Paste a video playlist link (e.g., YouTube) and we'll create a daily viewing schedule based on your time commitment.</p>
-  <form id="playlistPlanForm" class="space-y-4">
-    <div>
-      <label class="block text-sm font-medium mb-2">Playlist URL</label>
-      <input id="playlistUrl" type="url" required class="w-full px-3 py-2 rounded-lg bg-slate-900/50 border border-slate-700" placeholder="https://www.youtube.com/playlist?list=..." />
-    </div>
-    <div>
-      <label class="block text-sm font-medium mb-2">Daily Commitment (Total Hours)</label>
-      <input id="dailyHours" type="number" min="0.5" step="0.5" required class="w-full px-3 py-2 rounded-lg bg-slate-900/50 border border-slate-700" placeholder="e.g. 1.5" />
-    </div>
-    <button type="submit" id="generatePlaylistPlanBtn" class="w-full py-2 rounded-lg bg-gradient-to-r from-pink-500 to-red-600">Generate Viewing Schedule</button>
-  </form>
-
-  <div id="playlistScheduleArea" class="mt-6 space-y-3 border-t border-slate-700 pt-4">
-      <h4 class="font-medium text-slate-300">Generated Schedule:</h4>
-      </div>
-</div>
-
     /* ---------- Streak Logic ---------- */
     function getToday(){ return new Date().toISOString().slice(0,10); }
     function initStreak(){ const s = readLS(LS_KEYS.streak) || {count:0, last: null}; document.getElementById('streakBadge').innerText = s.count; document.getElementById('lastComplete').innerText = s.last?('Last complete: '+s.last):''; }
     function incrementStreakIfNeeded(){ const s = readLS(LS_KEYS.streak) || {count:0,last:null}; const today = getToday(); if(s.last !== today){ s.count += 1; s.last = today; saveLS(LS_KEYS.streak,s); initStreak(); showToast('Streak increased 🎉'); } }
 
     /* ---------- Dashboard Init & Generation ---------- */
-    function initDashboard(){ initProgressChart(); initStreak(); const onboard = readLS(LS_KEYS.onboarding); if(!onboard) return; document.title = `Skill Sync — ${onboard.goal}`; }
+    function initDashboard(){ 
+      initProgressChart(); 
+      initStreak(); 
+      const onboard = readLS(LS_KEYS.onboarding); 
+      if(!onboard) return; 
+      document.title = `Skill Sync — ${onboard.goal}`; 
+      
+      // Load skills if they exist in localStorage (needed for re-render if page refreshes)
+      const onboardSkills = onboard.skills || [];
+      skills.length = 0;
+      onboardSkills.forEach(s => {
+        const match = s.match(/(.*) \((.*)\)/);
+        if (match) {
+            skills.push({name: match[1].trim(), level: match[2].trim()});
+        }
+      });
+      renderTags();
+    }
 
     async function generateRoadmap(forceMock=false){
       const onboard = readLS(LS_KEYS.onboarding);
@@ -302,7 +419,15 @@
       try{
         if(!forceMock){
           const res = await fetch('/api/generate-roadmap', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({onboarding:onboard})});
-          if(res.ok){ const json = await res.json(); renderRoadmap(json.roadmap); saveLS(LS_KEYS.roadmap,json.roadmap); return; }
+          // NOTE: The backend /orchestrate now returns the full roadmap structure
+          if(res.ok){ 
+            const json = await res.json(); 
+            // Assuming roadmap is nested under 'roadmap' or 'result' from the crew output
+            const roadmapData = json.roadmap || (json.result ? JSON.parse(json.result).roadmap.milestones : mockGenerateRoadmap(onboard));
+            renderRoadmap(roadmapData); 
+            saveLS(LS_KEYS.roadmap,roadmapData); 
+            return; 
+          }
         }
       }catch(e){ /* ignore - fallback */ }
       // fallback
@@ -311,53 +436,6 @@
       saveLS(LS_KEYS.roadmap,mock);
     }
 
-/* ---------- Playlist Planner Logic ---------- */
-function renderPlaylistSchedule(schedule){
-  const area = document.getElementById('playlistScheduleArea');
-  area.innerHTML = '<h4 class="font-medium text-slate-300">Generated Schedule:</h4>';
-  if(schedule.length === 0) {
-    area.innerHTML += '<p class="text-slate-400 mt-2">No schedule generated or an error occurred.</p>';
-    return;
-  }
-  schedule.forEach(item => {
-    const div = document.createElement('div');
-    div.className = 'p-3 rounded-md bg-slate-900/40';
-    div.innerHTML = `<a href="${item.url}" target="_blank" class="font-medium text-indigo-400 hover:text-indigo-300 block">${item.video_title}</a>
-                     <div class="text-sm text-slate-400 mt-1">
-                        <i class="fa-solid fa-calendar-alt mr-1"></i> ${item.date}
-                        <span class="ml-4"><i class="fa-regular fa-clock mr-1"></i> ${item.time_needed_minutes} mins</span>
-                     </div>`;
-    area.appendChild(div);
-  });
-}
-
-const playlistPlanForm = document.getElementById('playlistPlanForm');
-playlistPlanForm.addEventListener('submit', async (e)=>{
-  e.preventDefault();
-  const url = document.getElementById('playlistUrl').value.trim();
-  const hours = document.getElementById('dailyHours').value;
-  const btn = document.getElementById('generatePlaylistPlanBtn');
-
-  btn.disabled = true; btn.innerText = 'Generating Schedule...';
-  try{
-    const res = await fetch('/api/generate-playlist-plan', {
-      method:'POST', headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({ playlistUrl: url, dailyHours: hours })
-    });
-    const json = await res.json();
-    if(res.ok && json.schedule){
-      renderPlaylistSchedule(json.schedule);
-    } else {
-      renderPlaylistSchedule([]);
-      showToast('Error: ' + (json.error || 'Failed to generate schedule.'));
-    }
-  }catch(e){
-    showToast('Network Error generating playlist plan.');
-  } finally {
-    btn.disabled = false; btn.innerText='Generate Viewing Schedule';
-  }
-});
-
     async function generateDailyPlan(forceMock=false){
       const onboard = readLS(LS_KEYS.onboarding);
       if(!onboard) return;
@@ -365,7 +443,16 @@ playlistPlanForm.addEventListener('submit', async (e)=>{
       try{
         if(!forceMock){
           const res = await fetch('/api/generate-plan', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({onboarding:onboard})});
-          if(res.ok){ const json = await res.json(); renderDailySchedule(json.plan); renderPlaylists(json.playlists); saveLS(LS_KEYS.plan,{plan:json.plan,checks:[]}); initProgressChart(); btn.disabled = false; btn.innerText='Generate Daily Plan'; return; }
+          if(res.ok){ 
+            const json = await res.json(); 
+            renderDailySchedule(json.plan); 
+            renderPlaylists(json.playlists); 
+            saveLS(LS_KEYS.plan,{plan:json.plan,checks:[]}); 
+            initProgressChart(); 
+            btn.disabled = false; 
+            btn.innerText='Generate Daily Plan'; 
+            return; 
+          }
         }
       }catch(e){ /* ignore */ }
 
@@ -376,16 +463,58 @@ playlistPlanForm.addEventListener('submit', async (e)=>{
       btn.disabled = false; btn.innerText='Generate Daily Plan';
     }
 
-    /* ---------- Task interactions ---------- */
+    /* ---------- Playlist Planner Logic (Event Listener) ---------- */
+    const playlistPlanForm = document.getElementById('playlistPlanForm');
+    playlistPlanForm.addEventListener('submit', async (e)=>{
+      e.preventDefault();
+      const url = document.getElementById('playlistUrl').value.trim();
+      const hours = document.getElementById('dailyHours').value;
+      const btn = document.getElementById('generatePlaylistPlanBtn');
+
+      btn.disabled = true; btn.innerText = 'Generating Schedule...';
+      try{
+        const res = await fetch('/api/generate-playlist-plan', {
+          method:'POST', headers:{'Content-Type':'application/json'},
+          body:JSON.stringify({ playlistUrl: url, dailyHours: hours })
+        });
+        const json = await res.json();
+        // The schedule object might be nested under 'schedule' or returned as raw JSON string
+        const scheduleData = json.schedule || JSON.parse(json.result || '{}').schedule || {error: json.error || 'Failed to parse agent output.'};
+        
+        renderPlaylistSchedule(scheduleData);
+      }catch(e){
+        showToast('Network Error or invalid URL submitted.');
+      } finally {
+        btn.disabled = false; btn.innerText='Generate Viewing Schedule';
+      }
+    });
+
+    /* ---------- Task interactions (Generalized) ---------- */
     document.addEventListener('change', (e)=>{
       if(e.target && e.target.classList.contains('task-check')){
-        const checks = Array.from(document.querySelectorAll('.task-check')).map(c=>c.checked);
-        const saved = readLS(LS_KEYS.plan) || {plan:[], checks:[]}; saved.checks = checks; saveLS(LS_KEYS.plan,saved);
-        // compute percent
-        const pct = Math.round((checks.filter(Boolean).length / checks.length) * 100);
+        const taskType = e.target.dataset.type;
+        let checks, saved;
+
+        if (taskType === 'daily-plan') {
+          // Track Daily Plan completion
+          checks = Array.from(document.querySelectorAll('.task-check[data-type="daily-plan"]')).map(c=>c.checked);
+          saved = readLS(LS_KEYS.plan) || {plan:[], checks:[]}; saved.checks = checks; saveLS(LS_KEYS.plan,saved);
+        } else if (taskType === 'playlist-plan') {
+          // Track Playlist Schedule completion
+          checks = Array.from(document.querySelectorAll('.task-check[data-type="playlist-plan"]')).map(c=>c.checked);
+          saved = readLS(LS_KEYS.playlist_schedule) || {schedule:[], checks:[]}; saved.checks = checks; saveLS(LS_KEYS.playlist_schedule,saved);
+        } else {
+          // Fallback for old/untyped tasks (e.g., initial local mock)
+          checks = Array.from(document.querySelectorAll('.task-check')).map(c=>c.checked);
+        }
+        
+        // Update Overall Progress (using only daily-plan checks for overall progress)
+        const dailyChecks = Array.from(document.querySelectorAll('.task-check[data-type="daily-plan"]')).map(c=>c.checked);
+        const pct = dailyChecks.length > 0 ? Math.round((dailyChecks.filter(Boolean).length / dailyChecks.length) * 100) : 0;
         updateProgressForToday(pct);
-        if(checks.every(Boolean)){
-          // all done -> increment streak once per day
+
+        // Check for Streak (only based on daily plan completion)
+        if(dailyChecks.length > 0 && dailyChecks.every(Boolean)){
           incrementStreakIfNeeded();
         }
       }
@@ -402,8 +531,19 @@ playlistPlanForm.addEventListener('submit', async (e)=>{
     // if onboarding already present on load, show dashboard
     window.addEventListener('load', ()=>{
       if(readLS(LS_KEYS.onboarding)){
-        onboardSection.classList.add('hidden'); dashboard.classList.remove('hidden'); initDashboard(); const savedPlan = readLS(LS_KEYS.plan); if(savedPlan && savedPlan.plan) renderDailySchedule(savedPlan.plan);
-        const savedRoadmap = readLS(LS_KEYS.roadmap); if(savedRoadmap) renderRoadmap(savedRoadmap);
+        onboardSection.classList.add('hidden'); 
+        dashboard.classList.remove('hidden'); 
+        initDashboard(); 
+        
+        // Load existing data from Local Storage
+        const savedPlan = readLS(LS_KEYS.plan); 
+        if(savedPlan && savedPlan.plan) renderDailySchedule(savedPlan.plan);
+        
+        const savedRoadmap = readLS(LS_KEYS.roadmap); 
+        if(savedRoadmap) renderRoadmap(savedRoadmap);
+        
+        const savedPlaylist = readLS(LS_KEYS.playlist_schedule);
+        if(savedPlaylist) renderPlaylistSchedule(savedPlaylist);
       }
     });
 
