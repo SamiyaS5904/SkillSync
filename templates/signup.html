@@ -74,60 +74,61 @@
       <button type="submit">Sign Up</button>
     </form>
     <p>Already have an account? <a href="/login">Login here</a></p>
+    <p class="mt-4"><a href="/admin/signup" class="text-rose-300 hover:text-rose-200"><i class="fa-solid fa-user-lock mr-1"></i> Sign Up as Admin</a></p>
   </div>
-
+  
   <script>
-  const passwordInput = document.getElementById('password');
-  const confirmInput = document.getElementById('confirm_password');
-  const feedbackDiv = document.getElementById('password-feedback');
-  const signupForm = document.querySelector('form');
+    // Existing password validation logic goes here (copied from previous steps)
+    const passwordInput = document.getElementById('password');
+    const confirmInput = document.getElementById('confirm_password');
+    const feedbackDiv = document.getElementById('password-feedback');
+    const signupForm = document.querySelector('form');
 
-  function validatePassword() {
-      const password = passwordInput.value;
-      let requirements = [];
-      if (password.length < 8) requirements.push('8+ chars');
-      if (!/[A-Z]/.test(password)) requirements.push('1 uppercase');
-      if (!/[a-z]/.test(password)) requirements.push('1 lowercase');
-      if (!/\d/.test(password)) requirements.push('1 digit');
-      if (!/[!@#$%^&*(),.?:{}|<>]/.test(password)) requirements.push('1 special char');
+    function validatePassword() {
+        const password = passwordInput.value;
+        let requirements = [];
+        if (password.length < 8) requirements.push('8+ chars');
+        if (!/[A-Z]/.test(password)) requirements.push('1 uppercase');
+        if (!/[a-z]/.test(password)) requirements.push('1 lowercase');
+        if (!/\d/.test(password)) requirements.push('1 digit');
+        if (!/[!@#$%^&*(),.?:{}|<>]/.test(password)) requirements.push('1 special char');
 
-      if (requirements.length === 0) {
-          feedbackDiv.innerHTML = '<span style="color:#4caf50;">Strong password!</span>';
-          return true;
-      } else {
-          feedbackDiv.innerHTML = `Needs: ${requirements.join(', ')}`;
-          return false;
-      }
-  }
+        if (requirements.length === 0) {
+            feedbackDiv.innerHTML = '<span style="color:#4caf50;">Strong password!</span>';
+            return true;
+        } else {
+            feedbackDiv.innerHTML = `Needs: ${requirements.join(', ')}`;
+            return false;
+        }
+    }
 
-  function validateConfirm() {
-      if (passwordInput.value !== confirmInput.value) {
-          confirmInput.style.border = '2px solid #f44336';
-          return false;
-      } else {
-          confirmInput.style.border = 'none'; 
-          return true;
-      }
-  }
+    function validateConfirm() {
+        if (passwordInput.value !== confirmInput.value) {
+            confirmInput.style.border = '2px solid #f44336';
+            return false;
+        } else {
+            confirmInput.style.border = 'none'; 
+            return true;
+        }
+    }
 
-  passwordInput.addEventListener('input', validatePassword);
-  confirmInput.addEventListener('input', validateConfirm);
+    passwordInput.addEventListener('input', validatePassword);
+    confirmInput.addEventListener('input', validateConfirm);
 
-  signupForm.addEventListener('submit', function(e) {
-      if (!validatePassword()) {
-          e.preventDefault();
-          alert('Please ensure your password meets all strength requirements.');
-          return;
-      }
-      if (passwordInput.value !== confirmInput.value) {
-          e.preventDefault();
-          alert('Passwords do not match.');
-          return;
-      }
-  });
+    signupForm.addEventListener('submit', function(e) {
+        if (!validatePassword()) {
+            e.preventDefault();
+            alert('Please ensure your password meets all strength requirements.');
+            return;
+        }
+        if (passwordInput.value !== confirmInput.value) {
+            e.preventDefault();
+            alert('Passwords do not match.');
+            return;
+        }
+    });
 
-  validatePassword();
-</script>
-
+    validatePassword();
+  </script>
 </body>
 </html>
