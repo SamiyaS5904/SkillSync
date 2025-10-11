@@ -95,6 +95,17 @@
         </div>
 
         <aside class="space-y-4">
+          
+          <div class="glass bg-slate-800/50 border border-slate-700 rounded-2xl p-4">
+            <h3 class="text-xl font-semibold mb-3"><i class="fa-solid fa-briefcase mr-2 text-indigo-400"></i> Career Readiness</h3>
+            <div id="readinessStatus" class="text-2xl font-bold text-emerald-400">
+              <span id="readinessPercent">Loading...</span>
+            </div>
+            <p class="text-slate-400 mt-2 text-sm" id="readinessMessage">Checking skills against market demand...</p>
+            <div id="internshipList" class="mt-4 space-y-3 border-t border-slate-700 pt-4">
+              <h4 class="font-medium text-slate-300">Suggested Opportunities:</h4>
+              </div>
+          </div>
           <div class="glass bg-slate-800/50 border border-slate-700 rounded-2xl p-4 text-center">
             <div id="streakBadge" class="mx-auto w-20 h-20 rounded-full border-4 border-indigo-500 flex items-center justify-center text-2xl font-extrabold bg-indigo-500/10">0</div>
             <p class="text-slate-300 mt-2">Current Streak</p>
@@ -130,25 +141,30 @@
       </div>
 
       <div class="glass bg-slate-800/50 border border-slate-700 rounded-2xl p-6">
-        <h3 class="font-semibold text-xl mb-4">Playlist Planner Agent 🤖</h3>
-        <p class="text-slate-400 mb-4">Paste a video playlist link (e.g., YouTube) and we'll create a daily viewing schedule based on your time commitment.</p>
+        <h3 class="font-semibold text-xl mb-4">Multi-Playlist Planner 🎵</h3>
+        <p class="text-slate-400 mb-4">Add multiple playlist links and the daily hours you can commit to **each** one. The agent will create a unified schedule.</p>
+        
         <form id="playlistPlanForm" class="space-y-4">
-          <div>
-            <label class="block text-sm font-medium mb-2">Playlist URL</label>
-            <input id="playlistUrl" type="url" required class="w-full px-3 py-2 rounded-lg bg-slate-900/50 border border-slate-700" placeholder="https://www.youtube.com/playlist?list=..." />
+          <div class="flex gap-3 mt-1">
+            <input id="newPlaylistUrl" type="url" placeholder="Playlist URL (e.g., YouTube)" class="flex-1 px-3 py-2 rounded-lg bg-slate-900/50 border border-slate-700" />
+            <input id="dailyHrsForPlaylist" type="number" min="0.5" step="0.5" placeholder="Hours/Day" class="w-24 px-3 py-2 rounded-lg bg-slate-900/50 border border-slate-700" />
+            <button type="button" id="addPlaylistBtn" class="px-3 py-2 rounded-lg bg-slate-700 hover:bg-slate-600">Add</button>
           </div>
-          <div>
-            <label class="block text-sm font-medium mb-2">Daily Commitment (Total Hours)</label>
-            <input id="dailyHours" type="number" min="0.5" step="0.5" required class="w-full px-3 py-2 rounded-lg bg-slate-900/50 border border-slate-700" placeholder="e.g. 1.5" />
-          </div>
-          <button type="submit" id="generatePlaylistPlanBtn" class="w-full py-2 rounded-lg bg-gradient-to-r from-pink-500 to-red-600">Generate Viewing Schedule</button>
+          
+          <div id="playlistInputsTags" class="mt-3 flex flex-wrap gap-2 min-h-[30px] border border-transparent">
+            </div>
+            <input type="hidden" id="playlistsDataInput" required>
+          
+          <button type="submit" id="generatePlaylistPlanBtn" class="w-full py-2 rounded-lg bg-gradient-to-r from-pink-500 to-red-600">Generate Unified Viewing Schedule</button>
         </form>
 
         <div id="playlistScheduleArea" class="mt-6 space-y-3 border-t border-slate-700 pt-4">
             <h4 class="font-medium text-slate-300">Generated Schedule:</h4>
             </div>
       </div>
-      </section>
+
+
+    </section>
 
   </main>
 
@@ -162,7 +178,8 @@
       roadmap: 'ss_roadmap_v1',
       progress: 'ss_progress_v1',
       streak: 'ss_streak_v1',
-      playlist_schedule: 'ss_playlist_schedule_v1' // Key for playlist schedule tracking
+      playlist_schedule: 'ss_playlist_schedule_v1',
+      readiness: 'ss_readiness_v1' // Key for Career Readiness
     };
 
     function saveLS(key, value) { localStorage.setItem(key, JSON.stringify(value)); }
@@ -184,7 +201,6 @@
           <button type="button" class="text-rose-300 hover:text-rose-200" onclick="removeSkill(${i})"><i class="fa-solid fa-xmark"></i></button>`;
         skillsTagsEl.appendChild(tag);
       });
-      // Update hidden input to validate skill submission
       structuredSkillsInput.value = skills.length > 0 ? 'true' : '';
     }
 
@@ -200,22 +216,58 @@
       renderTags();
     });
 
+    /* ---------- Multi-Playlist Input Logic (NEW) ---------- */
+    const playlists = readLS('ss_playlists_input', []); // {url: str, hours: float}
+    const newPlaylistUrlEl = document.getElementById('newPlaylistUrl');
+    const dailyHrsForPlaylistEl = document.getElementById('dailyHrsForPlaylist');
+    const playlistInputsTagsEl = document.getElementById('playlistInputsTags');
+    const playlistsDataInputEl = document.getElementById('playlistsDataInput');
+
+    function renderPlaylistTags() {
+      playlistInputsTagsEl.innerHTML = '';
+      playlists.forEach((p, i) => {
+        const tag = document.createElement('span');
+        tag.className = 'px-3 py-1 rounded-full text-sm bg-pink-800 border border-pink-700 flex items-center gap-2 max-w-full truncate';
+        tag.innerHTML = `<span class="truncate" title="${p.url}">URL...${p.url.slice(-20)}</span> (${p.hours}h)
+          <button type="button" class="text-rose-300 hover:text-rose-200" onclick="removePlaylist(${i})"><i class="fa-solid fa-xmark"></i></button>`;
+        playlistInputsTagsEl.appendChild(tag);
+      });
+      saveLS('ss_playlists_input', playlists);
+      playlistsDataInputEl.value = playlists.length > 0 ? 'true' : '';
+    }
+
+    function removePlaylist(i) {
+      playlists.splice(i, 1);
+      renderPlaylistTags();
+    }
+
+    document.getElementById('addPlaylistBtn').addEventListener('click', () => {
+      const url = newPlaylistUrlEl.value.trim();
+      const hours = parseFloat(dailyHrsForPlaylistEl.value);
+      if (!url || !hours || hours <= 0) {
+        showToast('Please enter a valid URL and hours.');
+        return;
+      }
+      playlists.push({ url, hours });
+      newPlaylistUrlEl.value = '';
+      dailyHrsForPlaylistEl.value = '';
+      renderPlaylistTags();
+    });
+
     /* ---------- Onboarding Flow ---------- */
     const onboardForm = document.getElementById('onboardForm');
     const onboardSection = document.getElementById('onboardSection');
     const dashboard = document.getElementById('dashboard');
     
-    // Set default start date to today
     document.getElementById('startDate').value = new Date().toISOString().slice(0,10);
 
     document.getElementById('demoFill').addEventListener('click', ()=>{
-      document.getElementById('goal').value = 'Software Engineer';
-      document.getElementById('hoursDay').value = 2;
-      document.getElementById('hoursWeekend').value = 4;
-      // Add demo skills to the structured input
+      document.getElementById('goal').value = 'AI Engineer';
+      document.getElementById('hoursDay').value = 3;
+      document.getElementById('hoursWeekend').value = 5;
       skills.length = 0;
       skills.push({name: 'Python', level: 'Intermediate'});
-      skills.push({name: 'HTML', level: 'Advanced'});
+      skills.push({name: 'Machine Learning Basics', level: 'Beginner'});
       renderTags();
     });
 
@@ -229,7 +281,6 @@
       
       const onboarding = {
         goal: document.getElementById('goal').value.trim(),
-        // Pass structured skills as an array of strings to the backend API
         skills: skills.map(s => `${s.name} (${s.level})`), 
         hoursDay: Number(document.getElementById('hoursDay').value)||0,
         hoursWeekend: Number(document.getElementById('hoursWeekend').value)||0,
@@ -241,15 +292,14 @@
       dashboard.classList.remove('hidden');
       initDashboard();
 
-      // auto-generate roadmap & plan for immediate feedback
       generateRoadmap(true);
       generateDailyPlan(true);
+      fetchJobReadiness(); // Initial readiness check
     });
 
     /* ---------- Mock AI Generators (fallback) ---------- */
-    // NOTE: Mock generators must be updated to handle structured skills if used.
     function mockGenerateRoadmap(onboarding){
-      // ... Mock implementation remains ...
+      // ... Mock implementation for roadmap remains ...
       const weeks = [];
       const base = onboarding.hoursDay >= 2 ? 'Practice daily problems' : 'Focus on fundamentals';
       weeks.push({title:'Week 1 — Foundations', desc:`Learn core topics: ${onboarding.skills.join(', ') || 'Programming basics'}. ${base}`, tasks:['Read basics','Watch intro videos','Try 5 exercises']});
@@ -260,7 +310,7 @@
     }
 
     function mockGeneratePlan(onboarding){
-      // ... Mock implementation remains ...
+      // ... Mock implementation for daily plan remains ...
       const minutes = Math.max(15, onboarding.hoursDay*60 || 60);
       const chunk = Math.floor(minutes/3);
       const today = new Date().toISOString().slice(0,10);
@@ -296,7 +346,6 @@
       plan.forEach((p, idx)=>{
         const div = document.createElement('div');
         div.className = 'flex items-center gap-3 p-3 rounded-md bg-slate-900/40';
-        // Added data-type="daily-plan" and date display
         div.innerHTML = `<input data-idx="${idx}" data-type="daily-plan" type="checkbox" class="task-check w-5 h-5" /> 
                          <div class="flex-1">
                             <div class="flex justify-between">
@@ -310,7 +359,6 @@
                          </div>`;
         area.appendChild(div);
       });
-      // restore saved checks
       const saved = readLS(LS_KEYS.plan) || {};
       if(saved.checks){
         document.querySelectorAll('.task-check[data-type="daily-plan"]').forEach(ch=>{ 
@@ -342,7 +390,6 @@
       data.schedule.forEach((item, idx) => {
         const div = document.createElement('div');
         div.className = 'p-3 rounded-md bg-slate-900/40 flex items-start gap-3';
-        // Added checkbox and video link
         div.innerHTML = `<input data-idx="${idx}" data-type="playlist-plan" type="checkbox" class="task-check w-5 h-5 mt-2" />
                          <div class="flex-1">
                             <div class="font-medium">
@@ -356,7 +403,6 @@
         area.appendChild(div);
       });
       
-      // Restore saved checks for playlist schedule
       const saved = readLS(LS_KEYS.playlist_schedule) || {};
       if(saved.checks){
         document.querySelectorAll('.task-check[data-type="playlist-plan"]').forEach(ch=>{ 
@@ -367,8 +413,63 @@
 
       saveLS(LS_KEYS.playlist_schedule, data);
     }
+    
+    function renderJobReadiness(data){
+        const percentEl = document.getElementById('readinessPercent');
+        const messageEl = document.getElementById('readinessMessage');
+        const listEl = document.getElementById('internshipList');
+        
+        listEl.innerHTML = '<h4 class="font-medium text-slate-300">Suggested Opportunities:</h4>';
 
-    /* ---------- Chart: Weekly Progress ---------- */
+        if(data.error || !data.readiness_percent){
+            percentEl.innerText = 'N/A';
+            messageEl.innerText = data.error || 'Could not fetch readiness data.';
+            percentEl.className = 'text-2xl font-bold text-slate-500';
+            return;
+        }
+
+        const percent = Math.min(100, data.readiness_percent);
+        percentEl.innerText = `${percent}% Ready`;
+        percentEl.className = `text-2xl font-bold ${percent >= 80 ? 'text-emerald-400' : percent >= 40 ? 'text-yellow-400' : 'text-rose-400'}`;
+        messageEl.innerText = data.message;
+
+        (data.internships || []).forEach(job => {
+            const item = document.createElement('div');
+            item.className = 'p-2 rounded-md bg-slate-900/40 border border-slate-700/50 text-sm';
+            item.innerHTML = `
+                <a href="${job.link}" target="_blank" class="font-medium text-indigo-400 hover:text-indigo-300">${job.title} at ${job.company}</a>
+                <p class="text-slate-500">${job.location || 'Remote'} | Missing: ${job.missing_skills.join(', ') || 'None'}</p>
+            `;
+            listEl.appendChild(item);
+        });
+        saveLS(LS_KEYS.readiness, data);
+    }
+
+    /* ---------- Data Fetchers ---------- */
+    async function fetchJobReadiness(){
+        const onboard = readLS(LS_KEYS.onboarding);
+        if(!onboard) return;
+
+        // Try to read from local storage first (to avoid excessive API calls)
+        const savedReadiness = readLS(LS_KEYS.readiness);
+        if(savedReadiness && (Date.now() - savedReadiness.timestamp) < (3600 * 1000)){ // Cache for 1 hour
+            renderJobReadiness(savedReadiness);
+            return;
+        }
+        
+        document.getElementById('readinessPercent').innerText = 'Checking...';
+
+        try{
+            const res = await fetch('/api/get-readiness');
+            const json = await res.json();
+            json.timestamp = Date.now(); // Add timestamp for caching
+            renderJobReadiness(json);
+        } catch(e){
+            renderJobReadiness({error: 'Failed to connect to Job Advisor.'});
+        }
+    }
+
+    /* ---------- Chart, Streak, & Initialization ---------- */
     let progressChart = null;
     function initProgressChart(){
       const ctx = document.getElementById('progressChart').getContext('2d');
@@ -385,20 +486,19 @@
       saveLS(LS_KEYS.progress, arr); if(progressChart){ progressChart.data.datasets[0].data = arr; progressChart.update(); }
     }
 
-    /* ---------- Streak Logic ---------- */
     function getToday(){ return new Date().toISOString().slice(0,10); }
     function initStreak(){ const s = readLS(LS_KEYS.streak) || {count:0, last: null}; document.getElementById('streakBadge').innerText = s.count; document.getElementById('lastComplete').innerText = s.last?('Last complete: '+s.last):''; }
     function incrementStreakIfNeeded(){ const s = readLS(LS_KEYS.streak) || {count:0,last:null}; const today = getToday(); if(s.last !== today){ s.count += 1; s.last = today; saveLS(LS_KEYS.streak,s); initStreak(); showToast('Streak increased 🎉'); } }
 
-    /* ---------- Dashboard Init & Generation ---------- */
     function initDashboard(){ 
       initProgressChart(); 
       initStreak(); 
+      fetchJobReadiness(); // Fetch readiness data on init
       const onboard = readLS(LS_KEYS.onboarding); 
       if(!onboard) return; 
       document.title = `Skill Sync — ${onboard.goal}`; 
       
-      // Load skills if they exist in localStorage (needed for re-render if page refreshes)
+      // Load skills for tag rendering
       const onboardSkills = onboard.skills || [];
       skills.length = 0;
       onboardSkills.forEach(s => {
@@ -408,6 +508,7 @@
         }
       });
       renderTags();
+      renderPlaylistTags(); // Load existing playlist inputs
     }
 
     async function generateRoadmap(forceMock=false){
@@ -415,14 +516,11 @@
       if(!onboard) return;
       const area = document.getElementById('roadmapArea'); area.innerHTML = '<p class="text-slate-300 animate-pulse">Generating roadmap...</p>';
 
-      // attempt server-side API, else fallback to mock
       try{
         if(!forceMock){
           const res = await fetch('/api/generate-roadmap', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({onboarding:onboard})});
-          // NOTE: The backend /orchestrate now returns the full roadmap structure
           if(res.ok){ 
             const json = await res.json(); 
-            // Assuming roadmap is nested under 'roadmap' or 'result' from the crew output
             const roadmapData = json.roadmap || (json.result ? JSON.parse(json.result).roadmap.milestones : mockGenerateRoadmap(onboard));
             renderRoadmap(roadmapData); 
             saveLS(LS_KEYS.roadmap,roadmapData); 
@@ -430,7 +528,6 @@
           }
         }
       }catch(e){ /* ignore - fallback */ }
-      // fallback
       const mock = mockGenerateRoadmap(onboard);
       renderRoadmap(mock);
       saveLS(LS_KEYS.roadmap,mock);
@@ -456,7 +553,6 @@
         }
       }catch(e){ /* ignore */ }
 
-      // fallback mock
       const mock = mockGeneratePlan(onboard);
       renderDailySchedule(mock.plan); renderPlaylists(mock.playlists);
       saveLS(LS_KEYS.plan,{plan:mock.plan,checks:[]});
@@ -467,25 +563,29 @@
     const playlistPlanForm = document.getElementById('playlistPlanForm');
     playlistPlanForm.addEventListener('submit', async (e)=>{
       e.preventDefault();
-      const url = document.getElementById('playlistUrl').value.trim();
-      const hours = document.getElementById('dailyHours').value;
-      const btn = document.getElementById('generatePlaylistPlanBtn');
+      
+      if(playlists.length === 0) {
+        showToast('Please add at least one playlist before generating the schedule.');
+        return;
+      }
 
-      btn.disabled = true; btn.innerText = 'Generating Schedule...';
+      const btn = document.getElementById('generatePlaylistPlanBtn');
+      btn.disabled = true; btn.innerText = 'Generating Unified Schedule...';
+      
       try{
         const res = await fetch('/api/generate-playlist-plan', {
           method:'POST', headers:{'Content-Type':'application/json'},
-          body:JSON.stringify({ playlistUrl: url, dailyHours: hours })
+          body:JSON.stringify({ playlists: playlists }) // Send the list of playlists
         });
         const json = await res.json();
-        // The schedule object might be nested under 'schedule' or returned as raw JSON string
+        
         const scheduleData = json.schedule || JSON.parse(json.result || '{}').schedule || {error: json.error || 'Failed to parse agent output.'};
         
         renderPlaylistSchedule(scheduleData);
       }catch(e){
         showToast('Network Error or invalid URL submitted.');
       } finally {
-        btn.disabled = false; btn.innerText='Generate Viewing Schedule';
+        btn.disabled = false; btn.innerText='Generate Unified Viewing Schedule';
       }
     });
 
@@ -496,16 +596,11 @@
         let checks, saved;
 
         if (taskType === 'daily-plan') {
-          // Track Daily Plan completion
           checks = Array.from(document.querySelectorAll('.task-check[data-type="daily-plan"]')).map(c=>c.checked);
           saved = readLS(LS_KEYS.plan) || {plan:[], checks:[]}; saved.checks = checks; saveLS(LS_KEYS.plan,saved);
         } else if (taskType === 'playlist-plan') {
-          // Track Playlist Schedule completion
           checks = Array.from(document.querySelectorAll('.task-check[data-type="playlist-plan"]')).map(c=>c.checked);
           saved = readLS(LS_KEYS.playlist_schedule) || {schedule:[], checks:[]}; saved.checks = checks; saveLS(LS_KEYS.playlist_schedule,saved);
-        } else {
-          // Fallback for old/untyped tasks (e.g., initial local mock)
-          checks = Array.from(document.querySelectorAll('.task-check')).map(c=>c.checked);
         }
         
         // Update Overall Progress (using only daily-plan checks for overall progress)
@@ -513,7 +608,6 @@
         const pct = dailyChecks.length > 0 ? Math.round((dailyChecks.filter(Boolean).length / dailyChecks.length) * 100) : 0;
         updateProgressForToday(pct);
 
-        // Check for Streak (only based on daily plan completion)
         if(dailyChecks.length > 0 && dailyChecks.every(Boolean)){
           incrementStreakIfNeeded();
         }
@@ -528,14 +622,13 @@
     document.getElementById('exportPdf').addEventListener('click', ()=>{ showToast('PDF export will be available in the next update.'); });
     document.getElementById('generatePlanBtn').addEventListener('click', ()=>generateDailyPlan(true));
 
-    // if onboarding already present on load, show dashboard
+    // Initial load
     window.addEventListener('load', ()=>{
       if(readLS(LS_KEYS.onboarding)){
         onboardSection.classList.add('hidden'); 
         dashboard.classList.remove('hidden'); 
         initDashboard(); 
         
-        // Load existing data from Local Storage
         const savedPlan = readLS(LS_KEYS.plan); 
         if(savedPlan && savedPlan.plan) renderDailySchedule(savedPlan.plan);
         
@@ -544,6 +637,9 @@
         
         const savedPlaylist = readLS(LS_KEYS.playlist_schedule);
         if(savedPlaylist) renderPlaylistSchedule(savedPlaylist);
+        
+        const savedReadiness = readLS(LS_KEYS.readiness);
+        if(savedReadiness) renderJobReadiness(savedReadiness);
       }
     });
 

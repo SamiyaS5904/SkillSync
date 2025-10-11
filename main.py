@@ -121,7 +121,8 @@ def signup():
         "goal": None,
         "roadmap": None,
         "conversations": [],
-        "is_admin": is_admin # <-- ADDED FIELD
+        "is_admin": is_admin,
+        "overall_progress": 0 # Initialize progress field
     })
     flash("Signup successful!", "success")
     return redirect(url_for("home"))
@@ -212,17 +213,16 @@ def orchestrate():
     duration = int(data.get("duration_months", 3))
     weekends = bool(data.get("weekends", True))
     try:
-        # --- UPDATED TO CALL NEW CREW METHOD ---
         crew_result = crew.orchestrate(goal, skills, hours, duration, weekends)
         
-        # Assuming crew_result contains a dictionary with the final structured roadmap
-        # NOTE: You'll need to parse the final JSON from the crew_result['result'] string
-        # For simplicity, we save the raw crew output here.
         roadmap_data = crew_result.get("result", {}) 
+        
+        # Calculate initial progress
+        overall_progress, _ = calculate_progress(roadmap_data)
         
         mongo.collection.update_one(
             {"email": session["user"]},
-            {"$set": {"goal": goal, "roadmap": roadmap_data},
+            {"$set": {"goal": goal, "roadmap": roadmap_data, "overall_progress": overall_progress},
              "$push": {"conversations": {"input": data, "response": crew_result, "ts": datetime.utcnow()}}}
         )
         return jsonify({"success": True, "roadmap": roadmap_data})
@@ -232,7 +232,6 @@ def orchestrate():
 # -------- Roadmap Generator for Dashboard (AJAX) --------
 @app.route("/api/generate-roadmap", methods=["POST"])
 def api_generate_roadmap():
-    # Use the full /orchestrate route for this, as it is the official crew-powered generator
     return orchestrate()
 
 
@@ -245,7 +244,6 @@ def api_generate_plan():
     onboarding = data.get("onboarding", {})
 
     try:
-        # --- UPDATED TO CALL NEW CREW METHOD ---
         crew_result = crew.run_daily_plan(
             goal=onboarding.get("goal"),
             skills=onboarding.get("skills", []),
@@ -254,7 +252,6 @@ def api_generate_plan():
             start_date=onboarding.get('startDate', datetime.utcnow().strftime('%Y-%m-%d'))
         )
 
-        # Parse the JSON string result from the agent output
         result_str = crew_result.get("result", "{}")
         try:
             result = json.loads(result_str)
@@ -270,55 +267,22 @@ def api_generate_plan():
         return jsonify({"error": str(e)}), 500
 
 
-
-# -------- Daily Plan Generator for Dashboard (AJAX) --------
-@app.route("/api/generate-plan", methods=["POST"])
-def api_generate_plan():
-    if "user" not in session:
-        return jsonify({"error": "Unauthorized"}), 401
-    data = request.get_json(force=True)
-    onboarding = data.get("onboarding", {})
-
-    try:
-        # Get start date from onboarding data, defaulting to today
-        start_date = onboarding.get('startDate', datetime.utcnow().strftime('%Y-%m-%d'))
-
-        # Enhance the prompt to include the start date and detailed skills
-        query = f"""
-Generate a daily learning plan and 2 recommended playlists.
-The plan must be highly personalized based on the skills and goal, and START from the date: {start_date}.
-
-Career Goal: {onboarding.get('goal')}
-Skills/Tools/Experience: {onboarding.get('skills')}
-Hours per weekday: {onboarding.get('hoursDay')}
-Hours per weekend: {onboarding.get('hoursWeekend')}
-
-Return JSON with two keys:
-- "plan": list of {{"time": "HH:MM", "title": "Task", "duration": minutes, "date": "YYYY-MM-DD"}} (The 'date' field is critical and must be present for each task, starting from {start_date})
-- "playlists": list of {{"title": str, "provider": str, "url": str, "length": str}}
-"""
-        result = crew.run_quick(query)
-
-# main.py
-
-# ...
-# -------- Playlist Plan Generator Endpoint --------
+# -------- NEW: Multi-Playlist Plan Generator Endpoint --------
 @app.route("/api/generate-playlist-plan", methods=["POST"])
 def api_generate_playlist_plan():
     if "user" not in session:
         return jsonify({"error": "Unauthorized"}), 401
     data = request.get_json(force=True)
-    playlist_url = data.get("playlistUrl")
-    daily_hours = float(data.get("dailyHours", 1.5))
+    # EXPECTED NEW INPUT FORMAT: list of {url, hours}
+    playlists = data.get("playlists") 
 
-    if not playlist_url:
-         return jsonify({"error": "Missing playlist URL"}), 400
+    if not playlists or not isinstance(playlists, list):
+         return jsonify({"error": "Missing or invalid playlist list"}), 400
 
     try:
-        # --- UPDATED TO CALL NEW CREW METHOD ---
-        crew_result = crew.run_playlist_plan(playlist_url, daily_hours)
+        # Crew call updated to take the list
+        crew_result = crew.run_playlist_plan(playlists)
         
-        # Parse the JSON string result from the agent output
         result_str = crew_result.get("result", "{}")
         try:
             result = json.loads(result_str)
@@ -333,9 +297,37 @@ def api_generate_playlist_plan():
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
-# -------- Roadmap Page --------
-@app.route("/roadmap")
-# ...
+# -------- NEW: Job Readiness Endpoint --------
+@app.route("/api/get-readiness", methods=["GET"])
+def api_get_readiness():
+    if "user" not in session:
+        return jsonify({"error": "Unauthorized"}), 401
+    
+    user_doc = mongo.collection.find_one({"email": session["user"]})
+    if not user_doc or not user_doc.get("goal"):
+        return jsonify({"error": "User goal not set for readiness check."}), 400
+
+    current_progress = user_doc.get("overall_progress", 0) 
+    career_goal = user_doc["goal"]
+
+    try:
+        # Call the Job Advisor Agent
+        crew_result = crew.run_job_readiness(career_goal, current_progress)
+        
+        result_str = crew_result.get("result", "{}")
+        try:
+            result = json.loads(result_str)
+        except json.JSONDecodeError:
+            result = {"readiness_percent": 0, "message": "Readiness agent output failed.", "internships": []}
+            
+        mongo.collection.update_one(
+            {"email": session["user"]},
+            {"$push": {"conversations": {"goal": career_goal, "progress": current_progress, "response": result, "ts": datetime.utcnow()}}}
+        )
+        return jsonify(result)
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
 
 # -------- Roadmap Page --------
 @app.route("/roadmap")
@@ -349,7 +341,7 @@ def roadmap():
     return render_template("roadmap.html", user=user_doc, roadmap=user_doc["roadmap"])
 
 
-# -------- Update Task --------
+# -------- Update Task (UPDATED TO RECALCULATE PROGRESS) --------
 @app.route("/update_task", methods=["POST"])
 def update_task():
     if "user" not in session:
@@ -370,11 +362,21 @@ def update_task():
             task["user_resources"].append(resource)
         elif done is not None:
             user_doc["roadmap"]["milestones"][milestone_index]["tasks"][task_index]["done"] = bool(done)
+
+        # RECALCULATE PROGRESS AND SAVE TO DOCUMENT
+        overall_progress, milestone_progress = calculate_progress(user_doc["roadmap"])
+
         mongo.collection.update_one(
             {"email": session["user"]},
-            {"$set": {"roadmap": user_doc["roadmap"]}}
+            {"$set": {"roadmap": user_doc["roadmap"], 
+                      "overall_progress": overall_progress}} # Save updated roadmap and overall progress
         )
-        return jsonify({"success": True})
+        
+        # Optional: Check for 100% completion of milestone[milestone_index] and trigger Motivation Coach
+        if milestone_progress[milestone_index] == 100:
+            flash(f"Milestone {milestone_index + 1} completed! Great job!", "success")
+            
+        return jsonify({"success": True, "overall_progress": overall_progress, "milestone_progress": milestone_progress})
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
@@ -382,3 +384,4 @@ def update_task():
 # -------- Run App --------
 if __name__ == "__main__":
     app.run(debug=True)
+    
