@@ -1,801 +1,281 @@
+<!-- templates/dashboard.html -->
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Skill Sync - Mentor Dashboard</title>
-
-    <script src="https://cdn.tailwindcss.com"></script>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
-    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
-
-    <style>
-        body { background: linear-gradient(120deg,#071028 0%, #0b1220 50%, #111827 100%); }
-        .glass { backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); }
-        .task-done { text-decoration: line-through; opacity: .6; }
-        .timeline-step { border-left: 3px dashed rgba(255,255,255,0.04); padding-left: 1rem; }
-        .dashboard-container { min-height: calc(100vh - 64px); }
-        .nav-link.active { background: #4f46e5; color: #eef2ff; }
-        .scrollable-nav { overflow-y: auto; -ms-overflow-style: none; scrollbar-width: none; }
-        .scrollable-nav::-webkit-scrollbar { display: none; }
-        .sidebar-collapsed { width: 4rem; transition: width 0.3s; }
-        .sidebar-collapsed .nav-text, .sidebar-collapsed .nav-title, .sidebar-collapsed .admin-text { display: none; }
-        .sidebar-expanded { width: 16rem; transition: width 0.3s; }
-    </style>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>SkillSync - Dashboard</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+<style>
+body { background: linear-gradient(120deg,#071028 0%, #0b1220 50%, #111827 100%); }
+.glass { backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); }
+.milestone-card { background: rgba(17,24,39,0.6); border: 1px solid rgba(148,163,184,0.06); padding: 12px; border-radius: 10px; }
+.subtopic { padding:6px; border-radius:6px; background: rgba(255,255,255,0.02); }
+.checkbox-tick { width:18px; height:18px; border-radius:4px; display:inline-block; border:1px solid rgba(255,255,255,0.12); margin-right:8px; vertical-align:middle; }
+</style>
 </head>
 <body>
-
-    <script>
-    /* --- UTILITIES & LS_KEYS --- */
-    const LS_KEYS = {
-        onboarding: 'ss_onboarding_v1',
-        plan: 'ss_plan_v1',
-        roadmap: 'ss_roadmap_v1',
-        progress: 'ss_progress_v1',
-        streak: 'ss_streak_v1',
-        playlist_schedule: 'ss_playlist_schedule_v1',
-        readiness: 'ss_readiness_v1'
-    };
-    function saveLS(key, value) { localStorage.setItem(key, JSON.stringify(value)); }
-    function readLS(key, fallback=null) { try { const v=localStorage.getItem(key); return v?JSON.parse(v):fallback; } catch(e){return fallback;} }
-    
-    const COMMON_SKILLS = [
-        "Python", "SQL", "Java", "JavaScript", "C++", "C#", "Go", "R",
-        "Data Structures & Algorithms", "Git/GitHub", "Docker", "Kubernetes",
-        "Cloud Computing (AWS/Azure)", "Machine Learning", "Deep Learning",
-        "Project Management", "UI/UX Design", "Communication"
-    ];
-    
-    // --- CRUCIAL: Get data passed from the Flask server ---
-    // This must be declared outside any function scope to be accessible globally
-    const INITIAL_ROADMAP_DATA = {{ user.roadmap | tojson }};
-
-
-    /* ---------- UI/UX LOGIC (Sidebar Collapse & Section Switching) ---------- */
-    const sidebar = document.getElementById('sidebar');
-    const toggleSidebar = document.getElementById('toggleSidebar');
-    const toggleIcon = document.getElementById('toggleIcon');
-    let isExpanded = true;
-
-    toggleSidebar.addEventListener('click', () => {
-        isExpanded = !isExpanded;
-        if (isExpanded) {
-            sidebar.classList.remove('sidebar-collapsed');
-            sidebar.classList.add('sidebar-expanded');
-            toggleIcon.classList.remove('fa-chevron-right');
-            toggleIcon.classList.add('fa-chevron-left');
-        } else {
-            sidebar.classList.remove('sidebar-expanded');
-            sidebar.classList.add('sidebar-collapsed');
-            toggleIcon.classList.remove('fa-chevron-left');
-            toggleIcon.classList.add('fa-chevron-right');
-        }
-    });
-
-    function showSection(sectionId) {
-        const sections = document.querySelectorAll('#dynamicContent > section');
-        const links = document.querySelectorAll('.nav-link');
-
-        sections.forEach(section => {
-            section.classList.add('hidden');
-        });
-        document.getElementById(`section-${sectionId}`).classList.remove('hidden');
-
-        links.forEach(link => {
-            link.classList.remove('active', 'bg-indigo-800/40', 'text-indigo-300');
-            link.classList.add('hover:bg-slate-800');
-        });
-        const activeLink = document.querySelector(`.nav-link[href="#section-${sectionId}"]`);
-        activeLink.classList.add('active', 'bg-indigo-800/40', 'text-indigo-300');
-        activeLink.classList.remove('hover:bg-slate-800');
-        
-        if (sectionId === 'readiness') {
-            fetchJobReadiness();
-        }
-        if (sectionId === 'skills') {
-            const onboard = readLS(LS_KEYS.onboarding);
-            if (onboard) {
-                document.getElementById('updateGoal').value = onboard.goal || '';
-                // Populate current skills/tags from the saved data
-                const onboardSkills = onboard.skills || [];
-                skills.length = 0; // Clear the temporary JS array
-                onboardSkills.forEach(s => {
-                    const match = s.match(/(.*) \((.*)\)/);
-                    if (match) {
-                        skills.push({name: match[1].trim(), level: match[2].trim()});
-                    }
-                });
-                renderTags(true); 
-            }
-            populateSkillDropdowns();
-        }
-    }
-    
-    /* ---------- ROADMAP RENDERER (FINAL ROBUST VERSION) ---------- */
-    function renderRoadmap(roadmapData) {
-        const container = document.getElementById('roadmapArea');
-        container.innerHTML = '';
-        
-        let parsedData = roadmapData;
-
-        // 1. Safely Parse Data if it's a JSON string
-        if (typeof roadmapData === 'string' && roadmapData.trim().startsWith('{')) {
-            try {
-                parsedData = JSON.parse(roadmapData);
-            } catch (e) {
-                console.error("Failed to parse roadmap string:", e);
-                container.innerHTML = '<p class="text-rose-400">Error rendering roadmap: Invalid JSON structure from the agent.</p>';
-                return;
-            }
-        }
-        
-        // 2. Extract Milestones (Handle nested structure from agent output)
-        const milestones = parsedData.milestones || [];
-
-        if (milestones.length === 0) {
-            container.innerHTML = '<p class="text-slate-400">No detailed roadmap found. Click Regenerate to start.</p>';
-            return;
-        }
-
-        milestones.forEach((m, i) => {
-            // Use robust keys (CrewAI output can use 'title'/'description' or 'milestone'/'goals')
-            const title = m.title || m.milestone || `Milestone ${i + 1}`;
-            const description = m.description || (m.goals ? m.goals.join(' / ') : 'No description provided.');
-            
-            const card = document.createElement('div');
-            card.className = 'rounded-xl p-4 bg-slate-900/50 border border-slate-700';
-            card.innerHTML = `<div class="flex items-start justify-between">
-                                <div>
-                                    <h4 class="font-semibold">${title}</h4>
-                                    <p class="text-slate-400 text-sm">${description}</p>
-                                </div>
-                                <div class="text-sm text-slate-400">Milestone ${i + 1}</div>
-                              </div>`;
-            
-            const ul = document.createElement('ul'); 
-            ul.className='mt-3 list-disc pl-5 text-slate-300';
-            
-            // Handle tasks/goals list
-            const tasksOrGoals = m.tasks || m.goals || [];
-            (tasksOrGoals).forEach(t => { 
-                const li = document.createElement('li'); 
-                li.innerText = t.title || t; 
-                ul.appendChild(li); 
-            });
-            
-            card.appendChild(ul);
-            container.appendChild(card);
-        });
-        
-        saveLS(LS_KEYS.roadmap, parsedData); 
-    }
-    
-    /* ---------- SKILL MANAGER & UPDATE LOGIC (Stubs/Final Logic) ---------- */
-    const skills = []; 
-    const updateGoalEl = document.getElementById('updateGoal');
-    const updateSkillDropdownEl = document.getElementById('updateSkillDropdown');
-    const updateCustomSkillInputEl = document.getElementById('updateCustomSkillInput');
-    const updateSkillLevelEl = document.getElementById('updateSkillLevel');
-    const updateSkillsTagsEl = document.getElementById('updateSkillsTags');
-
-    function populateSkillDropdowns() {
-        const dropdown = updateSkillDropdownEl;
-        if (!dropdown) return;
-        
-        dropdown.innerHTML = '<option value="">-- Select Common Skill --</option>';
-        COMMON_SKILLS.sort().forEach(skill => {
-            const option = document.createElement('option');
-            option.value = skill;
-            option.textContent = skill;
-            dropdown.appendChild(option);
-        });
-    }
-
-    function renderTags(isUpdateContext = false){
-        const container = updateSkillsTagsEl;
-        if (container) container.innerHTML = '';
-        
-        skills.forEach((s, i)=>{
-            const tag = document.createElement('span');
-            tag.className = 'px-3 py-1 rounded-full text-sm bg-indigo-800 border border-indigo-700 flex items-center gap-2';
-            tag.innerHTML = `${s.name} <span class="text-white/60">(${s.level})</span>
-                <button type="button" class="text-rose-300 hover:text-rose-200 ml-2" onclick="removeSkill(${i}, ${isUpdateContext})"><i class="fa-solid fa-xmark"></i></button>`;
-            if (container) container.appendChild(tag);
-        });
-    }
-
-    function removeSkill(i, isUpdateContext){ 
-        skills.splice(i,1); 
-        renderTags(true);
-    }
-
-    document.getElementById('updateAddSkillBtn').addEventListener('click', ()=>{
-        const n = updateSkillDropdownEl.value || updateCustomSkillInputEl.value.trim();
-        const l = updateSkillLevelEl.value;
-
-        if(!n) return;
-        if(skills.some(s=>s.name.toLowerCase()===n.toLowerCase())) {
-             showToast(`${n} is already added.`);
-             return;
-        }
-        
-        skills.push({name:n, level:l}); 
-        updateCustomSkillInputEl.value=''; 
-        updateSkillDropdownEl.value = '';
-        renderTags(true);
-    });
-    
-    document.getElementById('submitSkillUpdate').addEventListener('click', ()=>{
-        const newGoal = updateGoalEl.value.trim();
-        if (!newGoal || skills.length === 0) {
-            showToast('Please set a goal and add at least one skill.');
-            return;
-        }
-
-        const onboarding = {
-            goal: newGoal,
-            skills: skills.map(s => `${s.name} (${s.level})`), 
-            hoursDay: 2, 
-            hoursWeekend: 4,
-            startDate: new Date().toISOString().slice(0,10)
-        };
-        
-        showToast('Skillset updated! Generating new roadmap...');
-        // Placeholder for API call to /orchestrate
-        showSection('roadmap');
-    });
-
-
-    /* ---------- RENDERERS & DATA FETCHERS (Stubs) ---------- */
-    function renderDailySchedule(plan){ /* Full implementation not shown but assumed */ }
-    function renderPlaylists(list){ /* Full implementation not shown but assumed */ }
-    function rescheduleTask(taskIndex){ /* Full implementation not shown but assumed */ }
-    function renderJobReadiness(data){ /* Full implementation not shown but assumed */ }
-    function fetchJobReadiness(){ /* Full implementation not shown but assumed */ }
-    function renderMissingSkills(skillsArray){ /* Full implementation not shown but assumed */ }
-    function initProgressChart(){ /* Full implementation not shown but assumed */ }
-    function updateProgressForToday(percent){ /* Full implementation not shown but assumed */ }
-    function getToday(){ /* Full implementation not shown but assumed */ }
-    function initStreak(){ /* Full implementation not shown but assumed */ }
-    function incrementStreakIfNeeded(){ /* Full implementation not shown but assumed */ }
-    function showToast(msg){ /* Full implementation not shown but assumed */ }
-
-
-    /* ---------- INITIAL LOAD LOGIC (FIXED) ---------- */
-    function initDashboard(){ 
-        initProgressChart(); 
-        initStreak(); 
-        fetchJobReadiness(); 
-        const onboard = readLS(LS_KEYS.onboarding); 
-        
-        // Load skills into JS storage for the Skillset Manager
-        const onboardSkills = onboard ? onboard.skills || [] : [];
-        skills.length = 0;
-        onboardSkills.forEach(s => {
-            const match = s.match(/(.*) \((.*)\)/);
-            if (match) {
-                skills.push({name: match[1].trim(), level: match[2].trim()});
-            }
-        });
-        renderTags(true); 
-        populateSkillDropdowns();
-        
-        const missingSkills = {{ missing_skills | tojson }};
-        renderMissingSkills(missingSkills);
-    }
-
-    window.addEventListener('load', ()=>{
-        initDashboard();
-        
-        // 1. Check if the user has an initial roadmap passed from the server (after successful onboarding)
-        // CRITICAL FIX: The data is now guaranteed to be present and serializable.
-        if (INITIAL_ROADMAP_DATA && Object.keys(INITIAL_ROADMAP_DATA).length > 0) {
-            renderRoadmap(INITIAL_ROADMAP_DATA); 
-        } else {
-            // 2. Fallback to local storage if no new data came from the server (e.g., normal page refresh)
-            const savedRoadmap = readLS(LS_KEYS.roadmap); 
-            if(savedRoadmap) renderRoadmap(savedRoadmap);
-        }
-
-        // (Existing load logic for other components)
-        const savedPlan = readLS(LS_KEYS.plan); 
-        if(savedPlan && savedPlan.plan) renderDailySchedule(savedPlan.plan);
-        
-        const savedPlaylist = readLS(LS_KEYS.playlist_schedule);
-        if(savedPlaylist) renderPlaylistSchedule(savedPlaylist);
-    });
-</script>s
-    
-    <header class="h-16 bg-slate-900/50 border-b border-slate-700 flex items-center px-6 sticky top-0 z-50">
-        <a href="{{ url_for('dashboard') }}" class="text-xl font-extrabold bg-clip-text text-transparent bg-gradient-to-r from-indigo-400 to-pink-400"><i class="fa-solid fa-route mr-2"></i>SkillSync</a>
-        <div class="ml-auto flex items-center gap-4">
-            <a href="{{ url_for('logout') }}" class="text-sm text-rose-400 hover:text-rose-300"><i class="fa-solid fa-right-from-bracket mr-1"></i> Logout</a>
-        </div>
-    </header>
-
-    <div class="flex flex-1 dashboard-container">
-
-        <nav id="sidebar" class="sidebar-expanded bg-slate-900/70 border-r border-slate-700 p-4 sticky top-16 h-full flex flex-col space-y-6 scrollable-nav">
-            <button id="toggleSidebar" class="absolute top-2 -right-4 p-2 rounded-full bg-slate-700 hover:bg-slate-600 transition">
-                <i class="fa-solid fa-chevron-left text-sm text-white" id="toggleIcon"></i>
-            </button>
-
-            <div class="space-y-1">
-                <h4 class="text-sm font-semibold text-slate-400 mb-2 nav-title">Workspace</h4>
-                <a href="#section-roadmap" class="nav-link flex items-center gap-2 p-2 rounded-lg bg-indigo-800/40 text-indigo-300 active" onclick="showSection('roadmap')">
-                    <i class="fa-solid fa-map-location-dot w-5"></i> <span class="nav-text">Roadmap Planner</span>
-                </a>
-                <a href="#section-daily" class="nav-link flex items-center gap-2 p-2 rounded-lg hover:bg-slate-800" onclick="showSection('daily')">
-                    <i class="fa-solid fa-calendar-check w-5"></i> <span class="nav-text">Daily Task Generator</span>
-                </a>
-                <a href="#section-skills" class="nav-link flex items-center gap-2 p-2 rounded-lg hover:bg-slate-800" onclick="showSection('skills')">
-                    <i class="fa-solid fa-screwdriver-wrench w-5"></i> <span class="nav-text">Skillset Manager</span>
-                </a>
-            </div>
-            
-            <div class="space-y-1">
-                <h4 class="text-sm font-semibold text-slate-400 mb-2 nav-title">Tools & Analysis</h4>
-                <a href="#section-resources" class="nav-link flex items-center gap-2 p-2 rounded-lg hover:bg-slate-800" onclick="showSection('resources')">
-                    <i class="fa-solid fa-book-open w-5"></i> <span class="nav-text">Resource Hub</span>
-                </a>
-                <a href="#section-readiness" class="nav-link flex items-center gap-2 p-2 rounded-lg hover:bg-slate-800" onclick="showSection('readiness')">
-                    <i class="fa-solid fa-briefcase w-5"></i> <span class="nav-text">Job Readiness Report</span>
-                </a>
-                <a href="#section-playlist" class="nav-link flex items-center gap-2 p-2 rounded-lg hover:bg-slate-800" onclick="showSection('playlist')">
-                    <i class="fa-solid fa-music w-5"></i> <span class="nav-text">Playlist Planner</span>
-                </a>
-            </div>
-            
-            <div class="mt-auto space-y-1 border-t border-slate-800 pt-4">
-                 <a href="{{ url_for('admin_dashboard') }}" class="flex items-center gap-2 p-2 rounded-lg hover:bg-slate-800 text-rose-400">
-                     <i class="fa-solid fa-user-gear w-5"></i> <span class="admin-text nav-text">Admin Panel</span>
-                </a>
-            </div>
-        </nav>
-        <div class="flex-1 max-w-5xl mx-auto px-4 py-8 space-y-8">
-            
-            <header>
-                <h1 class="text-3xl font-extrabold text-white">Hii, {{ user.name }}! 👋</h1>
-                {% if user.goal %}
-                    <p class="text-slate-400 mt-1">Ready to level up your skills for: <span class="text-indigo-300 font-medium">{{ user.goal }}</span></p>
-                {% else %}
-                    <p class="text-slate-400 mt-1">Define your career goal in the Skillset Manager to begin your AI journey!</p>
-                {% endif %}
-            </header>
-
-            <section id="onboardSection" class="glass bg-slate-800/50 border border-slate-700 rounded-2xl p-6 shadow hidden">
-                </section>
-
-            <div id="dynamicContent">
-                
-                <section id="section-roadmap" class="space-y-6">
-                    <h2 class="text-2xl font-bold text-white">Roadmap Planner</h2>
-                    <div class="grid lg:grid-cols-3 gap-6 items-start">
-                        
-                        <div class="glass bg-slate-800/50 border border-slate-700 rounded-2xl p-6 shadow lg:col-span-2">
-                            <div class="flex items-start justify-between">
-                                <div>
-                                    <h3 class="text-xl font-semibold">Personalized Roadmap</h3>
-                                    <p class="text-slate-400 mt-1">Milestones generated by your AI Career Mentor.</p>
-                                </div>
-                                <div class="flex items-center gap-3">
-                                    <button id="regenerateRoadmap" class="px-3 py-2 rounded-lg bg-indigo-600">Regenerate</button>
-                                    <button id="exportPdf" class="px-3 py-2 rounded-lg bg-slate-700">Export PDF</button>
-                                </div>
-                            </div>
-
-                            <div id="missingSkillsArea" class="mt-6 p-4 rounded-xl bg-slate-900/50 border border-slate-700">
-                                <h4 class="font-semibold text-lg text-rose-300 mb-2"><i class="fa-solid fa-triangle-exclamation mr-1"></i> Missing Skills for {{ user.goal }}</h4>
-                                <div id="missingSkillButtons" class="flex flex-wrap gap-2">
-                                    </div>
-                            </div>
-                            <div id="roadmapArea" class="mt-6 space-y-4">
-                                </div>
-                        </div>
-                        
-                        <aside class="space-y-4">
-                            <div class="glass bg-slate-800/50 border border-slate-700 rounded-2xl p-4 text-center">
-                                <div id="streakBadge" class="mx-auto w-20 h-20 rounded-full border-4 border-indigo-500 flex items-center justify-center text-2xl font-extrabold bg-indigo-500/10">0</div>
-                                <p class="text-slate-300 mt-2">Current Streak</p>
-                                <p id="lastComplete" class="text-sm text-slate-400 mt-1"></p>
-                            </div>
-                            <div class="glass bg-slate-800/50 border border-slate-700 rounded-2xl p-4">
-                                <h3 class="font-semibold mb-2">Weekly Progress</h3>
-                                <canvas id="progressChart" width="300" height="200"></canvas>
-                            </div>
-                        </aside>
-                    </div>
-                </section>
-
-                <section id="section-daily" class="space-y-6 hidden">
-                    <h2 class="text-2xl font-bold text-white">Daily Task Generator</h2>
-                    <div class="glass bg-slate-800/50 border border-slate-700 rounded-2xl p-6">
-                        <div class="flex items-center justify-between">
-                            <h3 class="font-semibold text-xl">Today's Schedule</h3>
-                            <div class="glass bg-slate-800/50 border border-slate-700 rounded-2xl p-2 text-center">
-                                <button id="generatePlanBtn" class="py-1 rounded-lg bg-gradient-to-r from-emerald-500 to-teal-600 px-3 text-sm">Generate Today's Plan</button>
-                            </div>
-                        </div>
-                        <div id="scheduleArea" class="mt-4 space-y-3 timeline-step">
-                            </div>
-                    </div>
-                </section>
-                
-                <section id="section-skills" class="space-y-6 hidden">
-                    <h2 class="text-2xl font-bold text-white">Skillset Manager</h2>
-                    <div class="glass bg-slate-800/50 border border-slate-700 rounded-2xl p-6 shadow">
-                        <h3 class="text-xl font-semibold mb-4">Update Current Skills & Goal</h3>
-                        <form id="skillUpdateForm" class="space-y-4">
-                            <div class="grid sm:grid-cols-2 gap-4">
-                                <div>
-                                    <label class="block text-sm font-medium mb-2">Career Goal</label>
-                                    <input id="updateGoal" required class="w-full px-3 py-2 rounded-lg bg-slate-900/50 border border-slate-700" placeholder="e.g. AI Engineer, Software Architect" />
-                                </div>
-                            </div>
-
-                            <div>
-                                <label class="block text-sm font-medium mb-2">Current Skills & Proficiency</label>
-                                <div class="flex gap-3 mt-1">
-                                    <select id="updateSkillDropdown" class="flex-1 px-3 py-2 rounded-lg bg-slate-900/50 border border-slate-700">
-                                        </select>
-                                    <input id="updateCustomSkillInput" type="text" placeholder="Or type new skill" class="flex-1 px-3 py-2 rounded-lg bg-slate-900/50 border border-slate-700" />
-                                    
-                                    <select id="updateSkillLevel" class="px-3 py-2 rounded-lg bg-slate-900/50 border border-slate-700">
-                                        <option>Beginner</option>
-                                        <option>Intermediate</option>
-                                        <option>Advanced</option>
-                                    </select>
-                                    <button type="button" id="updateAddSkillBtn" class="px-3 py-2 rounded-lg bg-slate-700 hover:bg-slate-600"><i class="fa-solid fa-plus"></i></button>
-                                </div>
-                                <div id="updateSkillsTags" class="mt-3 flex flex-wrap gap-2 min-h-[30px] border border-transparent">
-                                    </div>
-                            </div>
-
-                            <button type="button" id="submitSkillUpdate" class="px-4 py-2 rounded-lg bg-indigo-600">Update Skillset & Regenerate Roadmap</button>
-                        </form>
-                    </div>
-                </section>
-
-                <section id="section-resources" class="space-y-6 hidden">
-                    <h2 class="font-bold text-xl">Resource Hub</h2>
-                    <div class="glass bg-slate-800/50 border border-slate-700 rounded-2xl p-6">
-                        <h3 class="font-semibold mb-2">Recommended Playlists (Generated by Agent)</h3>
-                        <div id="playlistArea" class="mt-2 grid gap-3">
-                            </div>
-                        <p class="text-slate-400 mt-4 border-t border-slate-700 pt-3 text-sm">
-                            *Tip: Recommended playlists are curated by the agent based on your goal and generated tasks.
-                        </p>
-                    </div>
-                </section>
-
-                <section id="section-readiness" class="space-y-6 hidden">
-                    <h2 class="font-bold text-xl">Job Readiness Report</h2>
-                    <div class="glass bg-slate-800/50 border border-slate-700 rounded-2xl p-6">
-                        <div class="grid lg:grid-cols-2 gap-6">
-                            <div class="space-y-4">
-                                <div class="glass bg-slate-900/70 border border-slate-700 rounded-2xl p-4">
-                                    <h3 class="text-xl font-semibold mb-3"><i class="fa-solid fa-briefcase mr-2 text-indigo-400"></i> Readiness Score</h3>
-                                    <div id="readinessStatus" class="text-2xl font-bold text-emerald-400">
-                                        <span id="readinessPercent">Loading...</span>
-                                    </div>
-                                    <p class="text-slate-400 mt-2 text-sm" id="readinessMessage">Checking skills against market demand...</p>
-                                </div>
-                            </div>
-                            
-                            <div class="space-y-4">
-                                 <div class="glass bg-slate-900/70 border border-slate-700 rounded-2xl p-4">
-                                    <h3 class="font-semibold mb-2">Suggested Opportunities</h3>
-                                    <div id="internshipList" class="mt-4 space-y-3">
-                                        <p class="text-slate-400 text-sm">Opportunities will appear after readiness check.</p>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </section>
-                
-                 <section id="section-playlist" class="space-y-6 hidden">
-                    <h2 class="font-bold text-xl">Playlist Planner</h2>
-                    <div class="glass bg-slate-800/50 border border-slate-700 rounded-2xl p-6">
-                        <form id="singlePlaylistForm" class="space-y-2">
-                            <p class="text-slate-400 text-sm font-medium">Plan Your Own Playlist:</p>
-                            <input id="singlePlaylistUrl" type="url" class="w-full px-3 py-2 rounded-lg bg-slate-800 border border-slate-700" placeholder="Paste YouTube Playlist URL" required />
-                            <div class="flex gap-2">
-                                <input id="singleDailyHours" type="number" min="0.5" step="0.5" class="w-24 px-3 py-2 rounded-lg bg-slate-800 border border-slate-700" placeholder="Hrs/Day" required />
-                                <button type="submit" class="flex-1 py-2 rounded-lg bg-pink-600 hover:bg-pink-700">Plan Playlist</button>
-                            </div>
-                            <div id="playlistScheduleArea" class="mt-3 space-y-3 text-sm">
-                                <h4 class="font-medium text-slate-300">Playlist Schedule:</h4>
-                            </div>
-                        </form>
-                    </div>
-                </section>
-            </div>
-        </div>
+<header class="h-16 bg-slate-900/50 border-b border-slate-700 flex items-center px-6 sticky top-0 z-50">
+    <a href="{{ url_for('dashboard') }}" class="text-xl font-extrabold bg-clip-text text-transparent bg-gradient-to-r from-indigo-400 to-pink-400">SkillSync</a>
+    <div class="ml-auto flex items-center gap-4">
+        <a href="{{ url_for('logout') }}" class="text-sm text-rose-400 hover:text-rose-300"><i class="fa-solid fa-right-from-bracket mr-1"></i> Logout</a>
     </div>
+</header>
 
-    <footer class="py-6 text-center text-slate-500 text-sm border-t border-slate-700">© 2025 Skill Sync</footer>
+<div class="flex">
+    <!-- Sidebar -->
+    <nav class="w-64 p-4 bg-slate-900/60 min-h-screen border-r border-slate-800">
+        <div class="space-y-6">
+            <div class="text-white font-bold">Menu</div>
+            <a href="{{ url_for('dashboard') }}" class="block text-slate-200 py-2">Dashboard</a>
+            <a href="{{ url_for('daily_planner') }}" class="block text-slate-200 py-2">Daily Planner</a>
+            <a href="{{ url_for('admin_panel') }}" class="block text-slate-200 py-2">Admin Panel</a>
+        </div>
+    </nav>
 
-    <script>
-        /* --- UTILITIES & LS_KEYS --- */
-        const LS_KEYS = {
-            onboarding: 'ss_onboarding_v1',
-            plan: 'ss_plan_v1',
-            roadmap: 'ss_roadmap_v1',
-            progress: 'ss_progress_v1',
-            streak: 'ss_streak_v1',
-            playlist_schedule: 'ss_playlist_schedule_v1',
-            readiness: 'ss_readiness_v1'
+    <!-- Main -->
+    <main class="flex-1 p-8 max-w-6xl mx-auto">
+        <h1 class="text-3xl font-bold text-white">Hi, {{ user.name }} 👋</h1>
+        <p class="text-slate-400 mt-1">Goal: <span class="text-indigo-300 font-medium">{{ user.goal or 'Not set' }}</span></p>
+
+        <!-- Controls -->
+        <div class="mt-6 glass bg-slate-800/50 border border-slate-700 rounded-2xl p-4">
+            <div class="grid md:grid-cols-3 gap-4">
+                <div>
+                    <label class="text-sm text-slate-300">Select Goal</label>
+                    <select id="goalSelect" class="w-full mt-1 px-3 py-2 rounded bg-slate-900/50 border border-slate-700 text-white">
+                        <option value="">-- Choose a Goal --</option>
+                        {% for g in predefined_goals %}
+                        <option value="{{ g }}" {% if g == user.goal %}selected{% endif %}>{{ g }}</option>
+                        {% endfor %}
+                        <option value="custom">Custom Goal...</option>
+                    </select>
+                    <input id="customGoalInput" placeholder="Enter custom goal" class="mt-2 w-full px-3 py-2 rounded bg-slate-900/50 border border-slate-700 text-white hidden" />
+                </div>
+
+                <div>
+                    <label class="text-sm text-slate-300">Current Skills (comma separated)</label>
+                    <input id="skillsInput" value="{{ (skills | join(', ')) if skills else '' }}" class="w-full mt-1 px-3 py-2 rounded bg-slate-900/50 border border-slate-700 text-white" />
+                </div>
+
+                <div>
+                    <label class="text-sm text-slate-300">Hours/day</label>
+                    <input id="hoursInput" type="number" min="0.5" step="0.5" value="2" class="w-full mt-1 px-3 py-2 rounded bg-slate-900/50 border border-slate-700 text-white" />
+                    <label class="text-sm text-slate-300 mt-2 block">Duration (months)</label>
+                    <input id="monthsInput" type="number" min="1" step="1" value="3" class="w-full mt-1 px-3 py-2 rounded bg-slate-900/50 border border-slate-700 text-white" />
+                </div>
+            </div>
+
+            <div class="mt-4 flex gap-2">
+                <button id="generateBtn" class="px-4 py-2 bg-indigo-600 rounded">Generate Roadmap (AI)</button>
+                <button id="regenerateBtn" class="px-4 py-2 bg-slate-700 rounded">Regenerate</button>
+                <button id="saveBtn" class="px-4 py-2 bg-emerald-600 rounded">Save Roadmap</button>
+                <button id="toDailyBtn" class="px-4 py-2 bg-pink-600 rounded">Start Daily Planner</button>
+            </div>
+        </div>
+
+        <!-- Roadmap area -->
+        <section class="mt-6">
+            <h2 class="text-xl font-bold text-white">Roadmap</h2>
+            <div id="roadmapArea" class="mt-4 space-y-4">
+                <!-- Rendered by JS -->
+            </div>
+        </section>
+    </main>
+</div>
+
+<script>
+const INITIAL_ROADMAP = {{ roadmap | tojson | default({}) }};
+const INITIAL_SKILLS = {{ skills | tojson | default([]) }};
+
+function createMilestoneCard(m, index){
+    const div = document.createElement('div');
+    div.className = 'milestone-card';
+    const title = m.title || `Milestone ${index+1}`;
+    const desc = m.description || '';
+    let tasks = m.tasks || (m.subtopics ? m.subtopics.map(st=>({title: st})) : []);
+    // Header + edit
+    div.innerHTML = `
+      <div class="flex justify-between items-start">
+        <div>
+          <input class="text-xl font-semibold bg-transparent border-0 text-white" value="${escapeHtml(title)}" />
+          <p class="text-slate-400 mt-1"><textarea class="w-full mt-2 bg-transparent text-slate-300 border-0" rows="2">${escapeHtml(desc)}</textarea></p>
+        </div>
+      </div>
+      <div class="mt-3">
+        <strong class="text-slate-300">Subtopics / Tasks</strong>
+        <ul class="mt-2 space-y-1" id="tasks-${index}"></ul>
+        <div class="mt-2 flex gap-2">
+          <input placeholder="Add task" class="new-task-input px-2 py-1 rounded bg-slate-900/50 border border-slate-700 text-white" />
+          <button class="add-task-btn px-2 py-1 bg-indigo-600 rounded">Add</button>
+        </div>
+        <div class="mt-3"><strong class="text-slate-300">Projects</strong><div class="projects mt-2"></div></div>
+      </div>
+    `;
+    // fill tasks
+    const tasksUl = div.querySelector(`#tasks-${index}`);
+    function renderTasks(){
+        tasksUl.innerHTML='';
+        tasks.forEach((t,i)=>{
+            const li = document.createElement('li');
+            li.className = 'flex items-center gap-3';
+            // custom tick box element (no emoji)
+            const cb = document.createElement('input');
+            cb.type = 'checkbox';
+            cb.className = 'checkbox-tick';
+            cb.checked = !!t.done;
+            cb.addEventListener('change', ()=>{ t.done = cb.checked; });
+            const span = document.createElement('span');
+            span.contentEditable = true;
+            span.innerText = t.title || '';
+            span.className = 'text-slate-200';
+            span.addEventListener('input', ()=>{ t.title = span.innerText; });
+            const removeBtn = document.createElement('button');
+            removeBtn.className = 'text-rose-400 px-2';
+            removeBtn.innerText = 'Remove';
+            removeBtn.addEventListener('click', ()=> { tasks.splice(i,1); renderTasks(); });
+            li.appendChild(cb);
+            li.appendChild(span);
+            li.appendChild(removeBtn);
+            tasksUl.appendChild(li);
+        });
+    }
+    renderTasks();
+    // add-task
+    div.querySelector('.add-task-btn').addEventListener('click', ()=>{
+        const input = div.querySelector('.new-task-input');
+        const val = input.value.trim();
+        if(val){ tasks.push({title: val}); input.value=''; renderTasks(); }
+    });
+    // projects placeholder
+    const projectsDiv = div.querySelector('.projects');
+    (m.projects || []).forEach(p=>{ const pEl = document.createElement('div'); pEl.className='text-slate-300'; pEl.innerText = '- ' + p; projectsDiv.appendChild(pEl); });
+
+    // attach data back
+    div.getRoadmapStruct = () => {
+        return {
+            title: div.querySelector('input').value.trim(),
+            description: div.querySelector('textarea').value.trim(),
+            tasks: tasks,
+            projects: m.projects || [],
+            resources: m.resources || []
         };
-        function saveLS(key, value) { localStorage.setItem(key, JSON.stringify(value)); }
-        function readLS(key, fallback=null) { try { const v=localStorage.getItem(key); return v?JSON.parse(v):fallback; } catch(e){return fallback;} }
-        
-        const COMMON_SKILLS = [
-            "Python", "SQL", "Java", "JavaScript", "C++", "C#", "Go", "R",
-            "Data Structures & Algorithms", "Git/GitHub", "Docker", "Kubernetes",
-            "Cloud Computing (AWS/Azure)", "Machine Learning", "Deep Learning",
-            "Project Management", "UI/UX Design", "Communication"
-        ];
-        
-        // --- CRUCIAL: Get data passed from the Flask server ---
-        const INITIAL_ROADMAP_DATA = {{ user.roadmap | tojson }};
+    };
+    return div;
+}
 
+function escapeHtml(unsafe) {
+    if(!unsafe) return '';
+    return unsafe.replace(/[&<>"']/g, function(m) { return ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'})[m]; });
+}
 
-        /* ---------- UI/UX LOGIC (Sidebar Collapse & Section Switching) ---------- */
-        const sidebar = document.getElementById('sidebar');
-        const toggleSidebar = document.getElementById('toggleSidebar');
-        const toggleIcon = document.getElementById('toggleIcon');
-        let isExpanded = true;
+function renderRoadmap(data){
+    const area = document.getElementById('roadmapArea');
+    area.innerHTML='';
+    const milestones = data.milestones || [];
+    if(milestones.length === 0){
+        area.innerHTML = '<p class="text-slate-400">No roadmap found. Click "Generate Roadmap (AI)".</p>';
+        return;
+    }
+    milestones.forEach((m,i)=>{
+        const card = createMilestoneCard(m,i);
+        area.appendChild(card);
+    });
+}
 
-        toggleSidebar.addEventListener('click', () => {
-            isExpanded = !isExpanded;
-            if (isExpanded) {
-                sidebar.classList.remove('sidebar-collapsed');
-                sidebar.classList.add('sidebar-expanded');
-                toggleIcon.classList.remove('fa-chevron-right');
-                toggleIcon.classList.add('fa-chevron-left');
-            } else {
-                sidebar.classList.remove('sidebar-expanded');
-                sidebar.classList.add('sidebar-collapsed');
-                toggleIcon.classList.remove('fa-chevron-left');
-                toggleIcon.classList.add('fa-chevron-right');
-            }
+let currentRoadmap = INITIAL_ROADMAP || {milestones: []};
+renderRoadmap(currentRoadmap);
+
+// UI interactions
+document.getElementById('goalSelect').addEventListener('change', (e)=>{
+    if(e.target.value === 'custom'){
+        document.getElementById('customGoalInput').classList.remove('hidden');
+    } else {
+        document.getElementById('customGoalInput').classList.add('hidden');
+    }
+});
+
+document.getElementById('generateBtn').addEventListener('click', async ()=>{
+    const sel = document.getElementById('goalSelect').value;
+    const goal = sel === 'custom' ? document.getElementById('customGoalInput').value.trim() : sel;
+    const skillsInput = document.getElementById('skillsInput').value.split(',').map(s=>s.trim()).filter(Boolean);
+    const hours = parseFloat(document.getElementById('hoursInput').value) || 2;
+    const months = parseInt(document.getElementById('monthsInput').value) || 3;
+    if(!goal){ alert('Please select or enter a goal'); return; }
+    // call backend to generate
+    try {
+        const resp = await fetch('/generate_roadmap', {
+            method:'POST',
+            headers:{'Content-Type':'application/json'},
+            body: JSON.stringify({goal, skills: skillsInput, hours, duration_months: months})
         });
-
-        function showSection(sectionId) {
-            const sections = document.querySelectorAll('#dynamicContent > section');
-            const links = document.querySelectorAll('.nav-link');
-
-            sections.forEach(section => {
-                section.classList.add('hidden');
-            });
-            document.getElementById(`section-${sectionId}`).classList.remove('hidden');
-
-            links.forEach(link => {
-                link.classList.remove('active', 'bg-indigo-800/40', 'text-indigo-300');
-                link.classList.add('hover:bg-slate-800');
-            });
-            const activeLink = document.querySelector(`.nav-link[href="#section-${sectionId}"]`);
-            activeLink.classList.add('active', 'bg-indigo-800/40', 'text-indigo-300');
-            activeLink.classList.remove('hover:bg-slate-800');
-            
-            if (sectionId === 'readiness') {
-                fetchJobReadiness();
-            }
-            if (sectionId === 'skills') {
-                const onboard = readLS(LS_KEYS.onboarding);
-                if (onboard) {
-                    document.getElementById('updateGoal').value = onboard.goal || '';
-                    // Populate current skills/tags from the saved data
-                    const onboardSkills = onboard.skills || [];
-                    skills.length = 0; // Clear the temporary JS array
-                    onboardSkills.forEach(s => {
-                        const match = s.match(/(.*) \((.*)\)/);
-                        if (match) {
-                            skills.push({name: match[1].trim(), level: match[2].trim()});
-                        }
-                    });
-                    renderTags(true); 
-                }
-                populateSkillDropdowns();
-            }
+        const data = await resp.json();
+        if(data.error){
+            alert('AI Error: '+data.error);
+            return;
         }
-        
-        /* ---------- ROADMAP RENDERER (FIXED) ---------- */
-        function renderRoadmap(roadmapData) {
-            const container = document.getElementById('roadmapArea');
-            container.innerHTML = '';
-            
-            let parsedData = roadmapData;
-            // 1. Check if the data is a JSON string and parse it (handles raw API output)
-            if (typeof roadmapData === 'string' && roadmapData.trim().startsWith('{')) {
-                try {
-                    parsedData = JSON.parse(roadmapData);
-                } catch (e) {
-                    console.error("Failed to parse roadmap string:", e);
-                    container.innerHTML = '<p class="text-rose-400">Error rendering roadmap: The AI output is not a valid JSON structure. Try regenerating.</p>';
-                    return;
-                }
-            }
-            
-            // 2. Extract Milestones
-            const milestones = parsedData.milestones || [];
+        currentRoadmap = data.roadmap;
+        renderRoadmap(currentRoadmap);
+        alert('Roadmap generated!');
+    } catch(err){
+        alert('Network error: ' + err);
+    }
+});
 
-            if (milestones.length === 0) {
-                container.innerHTML = '<p class="text-slate-400">No detailed roadmap found. Click Regenerate to start.</p>';
-                return;
-            }
-
-            milestones.forEach((m, i) => {
-                // Use robust keys
-                const title = m.title || m.milestone || `Milestone ${i + 1}`;
-                const description = m.description || (m.goals ? m.goals.join(' / ') : 'No description provided.');
-                
-                const card = document.createElement('div');
-                card.className = 'rounded-xl p-4 bg-slate-900/50 border border-slate-700';
-                card.innerHTML = `<div class="flex items-start justify-between">
-                                    <div>
-                                        <h4 class="font-semibold">${title}</h4>
-                                        <p class="text-slate-400 text-sm">${description}</p>
-                                    </div>
-                                    <div class="text-sm text-slate-400">Week ${i + 1}</div>
-                                  </div>`;
-                
-                const ul = document.createElement('ul'); 
-                ul.className='mt-3 list-disc pl-5 text-slate-300';
-                
-                // Handle tasks/goals list
-                const tasksOrGoals = m.tasks || m.goals || [];
-                (tasksOrGoals).forEach(t => { 
-                    const li = document.createElement('li'); 
-                    li.innerText = t.title || t; 
-                    ul.appendChild(li); 
-                });
-                
-                card.appendChild(ul);
-                container.appendChild(card);
-            });
-            
-            saveLS(LS_KEYS.roadmap, parsedData); 
-        }
-        
-        /* ---------- SKILL MANAGER & UPDATE LOGIC ---------- */
-        const skills = []; 
-        const updateGoalEl = document.getElementById('updateGoal');
-        const updateSkillDropdownEl = document.getElementById('updateSkillDropdown');
-        const updateCustomSkillInputEl = document.getElementById('updateCustomSkillInput');
-        const updateSkillLevelEl = document.getElementById('updateSkillLevel');
-        const updateSkillsTagsEl = document.getElementById('updateSkillsTags');
-
-        function populateSkillDropdowns() {
-            const dropdown = updateSkillDropdownEl;
-            if (!dropdown) return;
-            
-            dropdown.innerHTML = '<option value="">-- Select Common Skill --</option>';
-            COMMON_SKILLS.sort().forEach(skill => {
-                const option = document.createElement('option');
-                option.value = skill;
-                option.textContent = skill;
-                dropdown.appendChild(option);
-            });
-        }
-
-        function renderTags(isUpdateContext = false){
-            const container = updateSkillsTagsEl;
-
-            if (container) container.innerHTML = '';
-            
-            skills.forEach((s, i)=>{
-                const tag = document.createElement('span');
-                tag.className = 'px-3 py-1 rounded-full text-sm bg-indigo-800 border border-indigo-700 flex items-center gap-2';
-                tag.innerHTML = `${s.name} <span class="text-white/60">(${s.level})</span>
-                    <button type="button" class="text-rose-300 hover:text-rose-200 ml-2" onclick="removeSkill(${i}, ${isUpdateContext})"><i class="fa-solid fa-xmark"></i></button>`;
-                if (container) container.appendChild(tag);
-            });
-        }
-
-        function removeSkill(i, isUpdateContext){ 
-            skills.splice(i,1); 
-            renderTags(true);
-        }
-
-        document.getElementById('updateAddSkillBtn').addEventListener('click', ()=>{
-            const n = updateSkillDropdownEl.value || updateCustomSkillInputEl.value.trim();
-            const l = updateSkillLevelEl.value;
-
-            if(!n) return;
-            if(skills.some(s=>s.name.toLowerCase()===n.toLowerCase())) {
-                 showToast(`${n} is already added.`);
-                 return;
-            }
-            
-            skills.push({name:n, level:l}); 
-            updateCustomSkillInputEl.value=''; 
-            updateSkillDropdownEl.value = '';
-            renderTags(true);
+document.getElementById('regenerateBtn').addEventListener('click', async ()=>{
+    // regenerate using same goal/skills
+    const sel = document.getElementById('goalSelect').value;
+    const goal = sel === 'custom' ? document.getElementById('customGoalInput').value.trim() : sel;
+    const skillsInput = document.getElementById('skillsInput').value.split(',').map(s=>s.trim()).filter(Boolean);
+    if(!goal){ alert('Select goal first'); return; }
+    try {
+        const resp = await fetch('/generate_roadmap', {
+            method:'POST',
+            headers:{'Content-Type':'application/json'},
+            body: JSON.stringify({goal, skills: skillsInput, hours: 2, duration_months: 3})
         });
-        
-        document.getElementById('submitSkillUpdate').addEventListener('click', ()=>{
-            const newGoal = updateGoalEl.value.trim();
-            if (!newGoal || skills.length === 0) {
-                showToast('Please set a goal and add at least one skill.');
-                return;
-            }
-            
-            // NOTE: The hours/duration are not updated here, they'd need to be stored in the DB
-            const onboarding = {
-                goal: newGoal,
-                skills: skills.map(s => `${s.name} (${s.level})`), 
-                // Hours/Duration defaults or retrieved from DB if stored
-                hoursDay: 2, 
-                hoursWeekend: 4,
-                startDate: new Date().toISOString().slice(0,10)
-            };
-            
-            // This is where you would call an API to regenerate the roadmap with the new goals
-            showToast('Skillset updated! Generating new roadmap...');
-            // Example: fetch('/orchestrate', {method: 'POST', body: JSON.stringify(onboarding)})
-            
-            showSection('roadmap');
-        });
+        const data = await resp.json();
+        if(data.error){ alert('AI Error: '+data.error); return; }
+        currentRoadmap = data.roadmap;
+        renderRoadmap(currentRoadmap);
+        alert('Roadmap regenerated!');
+    } catch(e){
+        alert('Network error: '+e);
+    }
+});
 
-
-        /* ---------- RENDERERS & DATA FETCHERS (Stubs) ---------- */
-        function renderDailySchedule(plan){ /* Full implementation not shown but assumed */ }
-        function renderPlaylists(list){ /* Full implementation not shown but assumed */ }
-        function rescheduleTask(taskIndex){ /* Full implementation not shown but assumed */ }
-        function renderJobReadiness(data){ /* Full implementation not shown but assumed */ }
-        function fetchJobReadiness(){ /* Full implementation not shown but assumed */ }
-        function renderMissingSkills(skillsArray){ /* Full implementation not shown but assumed */ }
-        function initProgressChart(){ /* Full implementation not shown but assumed */ }
-        function updateProgressForToday(percent){ /* Full implementation not shown but assumed */ }
-        function getToday(){ /* Full implementation not shown but assumed */ }
-        function initStreak(){ /* Full implementation not shown but assumed */ }
-        function incrementStreakIfNeeded(){ /* Full implementation not shown but assumed */ }
-        function showToast(msg){ /* Full implementation not shown but assumed */ }
-
-        /* ---------- INITIAL LOAD LOGIC (FIXED) ---------- */
-        function initDashboard(){ 
-            initProgressChart(); 
-            initStreak(); 
-            fetchJobReadiness(); 
-            const onboard = readLS(LS_KEYS.onboarding); 
-            
-            // Load skills from JS storage (or user context) for the Skillset Manager
-            const onboardSkills = onboard ? onboard.skills || [] : [];
-            skills.length = 0;
-            onboardSkills.forEach(s => {
-                const match = s.match(/(.*) \((.*)\)/);
-                if (match) {
-                    skills.push({name: match[1].trim(), level: match[2].trim()});
-                }
-            });
-            renderTags(true); 
-            populateSkillDropdowns();
-            
-            const missingSkills = {{ missing_skills | tojson }};
-            renderMissingSkills(missingSkills);
+document.getElementById('saveBtn').addEventListener('click', async ()=>{
+    // collect roadmap from cards
+    const area = document.getElementById('roadmapArea');
+    const cards = area.children;
+    const newRoadmap = { goal: (document.getElementById('goalSelect').value === 'custom' ? document.getElementById('customGoalInput').value : document.getElementById('goalSelect').value), milestones: [] };
+    for(let c of cards){
+        if(typeof c.getRoadmapStruct === 'function'){
+            newRoadmap.milestones.push(c.getRoadmapStruct());
         }
-
-        window.addEventListener('load', ()=>{
-            initDashboard();
-            
-            // 1. Check if the user has an initial roadmap passed from the server (after successful onboarding)
-            if (INITIAL_ROADMAP_DATA && Object.keys(INITIAL_ROADMAP_DATA).length > 0) {
-                renderRoadmap(INITIAL_ROADMAP_DATA); 
-            } else {
-                // 2. Fallback to local storage if no new data came from the server (e.g., normal page refresh)
-                const savedRoadmap = readLS(LS_KEYS.roadmap); 
-                if(savedRoadmap) renderRoadmap(savedRoadmap);
-            }
-
-            // (Existing load logic for other components)
-            const savedPlan = readLS(LS_KEYS.plan); 
-            if(savedPlan && savedPlan.plan) renderDailySchedule(savedPlan.plan);
-            
-            const savedPlaylist = readLS(LS_KEYS.playlist_schedule);
-            if(savedPlaylist) renderPlaylistSchedule(savedPlaylist);
+    }
+    try {
+        const resp = await fetch('/save_roadmap', {
+            method:'POST',
+            headers:{'Content-Type':'application/json'},
+            body: JSON.stringify({roadmap: newRoadmap})
         });
-    </script>
+        const data = await resp.json();
+        if(data.success){
+            alert('Roadmap saved to your profile.');
+            currentRoadmap = newRoadmap;
+        } else {
+            alert('Save failed: ' + (data.error || 'unknown'));
+        }
+    } catch(e){
+        alert('Network error: ' + e);
+    }
+});
+
+document.getElementById('toDailyBtn').addEventListener('click', ()=>{
+    window.location.href = "/daily_planner";
+});
+</script>
 </body>
 </html>

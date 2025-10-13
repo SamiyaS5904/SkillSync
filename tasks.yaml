@@ -1,91 +1,100 @@
 tasks:
   - id: career_path_task
     description: >
-      Analyze the user’s career goal and existing skills to identify required skills,
-      suggest realistic career paths, and provide a motivational message.
-      **Output must be a structured JSON object only.**
+      Analyze the user's selected career goal (e.g., Data Scientist, Web Developer, AI Engineer)
+      and identify trending 2025 job paths. Suggest roles, required skills, missing skills,
+      and certifications with a short motivational summary.
+      Output must be a clean structured JSON only.
     expected_output: >
       JSON:
       {
-        "career_paths": [ "path 1", "path 2" ],
-        "required_skills_gaps": [ "missing_skill1", "missing_skill2" ],
-        "certifications": [ "cert1", "cert2" ],
-        "motivational_message": "short inspiring note"
+        "career_paths": [ "AI Engineer", "Data Analyst", "ML Engineer" ],
+        "required_skills_gaps": [ "Deep Learning", "Python", "Data Pipelines" ],
+        "certifications": [ "Google Data Analytics", "AWS ML Specialty" ],
+        "motivational_message": "Keep building and stay consistent — small progress daily compounds!"
       }
     agent: career_guide
 
   - id: roadmap_task
     description: >
-      Based on the required skills and user constraints (hours per day, total months, and the
-      output from the career_path_task), generate a detailed learning roadmap
-      with 3-5 milestones, weekly goals, project ideas, and a timeline overview.
-      Output must be structured and in **JSON format only** for database storage.
+      Generate a 2025-ready detailed learning roadmap.
+      Include milestones, subtopics, weekly goals, project ideas, and structured resources.
+      Each milestone should expand into detailed subtopics (Python -> Syntax, Numpy, Pandas, etc.).
+      Focus on practical learning and job-readiness.
+      Output must be JSON only for frontend rendering.
     expected_output: >
       JSON:
       {
-        "milestones": [{ "title": "", "duration_weeks": 0, "description": "", "tasks": ["task 1", "task 2"] }],
-        "weekly_goals": [ "goal1", "goal2" ],
-        "projects": [ "project idea 1", "project idea 2" ],
-        "timeline_overview": "short summary"
+        "goal": "Data Scientist",
+        "milestones": [
+          {
+            "title": "Master Python for Data Science",
+            "subtopics": ["Syntax", "Data Structures", "Pandas", "Numpy", "Matplotlib"],
+            "resources": ["https://youtube.com/..."],
+            "projects": ["Stock Price Predictor", "Data Dashboard"]
+          }
+        ],
+        "weekly_goals": ["Complete Python basics", "Learn SQL joins", "Visualize data"],
+        "timeline_overview": "Estimated 12 weeks roadmap divided into 4 milestones."
       }
     agent: learning_coach
 
-  - id: daily_plan_task # NEW TASK
+  - id: daily_plan_task
     description: >
-      Generate a granular daily learning plan for one week, starting from the specified date.
-      Break down the roadmap tasks into specific time slots, respecting the user's
-      daily and weekend hour constraints. Include 2 recommended video playlists.
-      **Output must be a structured JSON object only.**
+      Create a day-wise plan (1 week at least) based on the generated roadmap.
+      Include tasks, durations, subtopic focus, and short breaks.
+      Also recommend 2 video playlists for the week (YouTube preferred).
     expected_output: >
       JSON:
       {
         "plan": [
-          { "date": "YYYY-MM-DD", "time": "HH:MM", "title": "Task Title", "duration": 30 }
+          { "date": "2025-10-14", "time": "09:00", "title": "Learn Python Basics", "duration": 60 },
+          { "date": "2025-10-15", "time": "09:00", "title": "Practice Pandas", "duration": 90 }
         ],
         "playlists": [
-          { "title": "Playlist Title", "provider": "YouTube", "url": "URL" }
+          { "title": "Python for Data Science Full Course", "url": "https://youtube.com/xyz" },
+          { "title": "SQL for Analysts", "url": "https://youtube.com/abc" }
         ]
       }
     agent: learning_coach
 
-  - id: playlist_scheduling_task # NEW TASK
+  - id: playlist_scheduling_task
     description: >
-      Use the Playlist Planner Tool to analyze the provided playlist URL. Create a detailed,
-      date-stamped schedule for viewing all videos, respecting the user's daily hour commitment.
-      **Output must be a structured JSON object only.**
+      Given a YouTube or Udemy playlist, generate a structured watch schedule
+      (date, title, duration) respecting user’s available time.
     expected_output: >
       JSON:
       {
         "schedule": [
-          { "date": "YYYY-MM-DD", "video_title": "Video Title", "time_needed_minutes": 45, "url": "Video URL" }
+          { "date": "2025-10-14", "video_title": "Intro to Python", "url": "https://youtube.com/1", "time_needed_minutes": 30 }
         ],
-        "schedule_summary": "Total viewing time and number of days required."
+        "schedule_summary": "Total 8 videos, approx. 4 hours watch time."
       }
     agent: learning_coach
 
   - id: job_search_task
     description: >
-      Recommend relevant job listings (use Web Search Tool for up-to-date data) that match the user’s
-      roadmap skills. Highlight the missing skills needed for each role. Output should be
-      **Markdown with clear headings and JSON structure**.
+      Fetch and recommend real-world job listings that align with user’s roadmap skills.
+      Highlight missing skills for each.
     expected_output: >
       JSON:
       {
         "jobs": [
-          { "title": "", "company": "", "location": "", "link": "", "missing_skills": [] }
+          { "title": "Data Analyst", "company": "Google", "location": "Remote", "link": "https://careers.google.com", "missing_skills": ["Power BI"] }
         ]
       }
     agent: job_advisor
 
   - id: interview_task
     description: >
-      Generate mock interview questions for the user’s chosen career path.
-      Cover multiple difficulty levels (Easy, Medium, Hard). Format clearly in **Markdown**.
+      Generate interview questions (Easy, Medium, Hard) for the user’s chosen goal.
+      Cover theory, application, and problem-solving.
     expected_output: >
       JSON:
       {
         "questions": [
-          { "question": "What is X?", "difficulty_level": "Easy" }
+          { "question": "Explain the difference between supervised and unsupervised learning.", "difficulty_level": "Easy" },
+          { "question": "How does gradient descent work?", "difficulty_level": "Medium" }
         ]
       }
     agent: job_advisor

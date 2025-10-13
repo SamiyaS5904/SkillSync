@@ -1,0 +1,106 @@
+<!-- templates/daily_planner.html -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>SkillSync - Daily Planner</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<style> body { background: linear-gradient(120deg,#071028,#0b1220); color:white; } .card{ background: rgba(17,24,39,0.6); padding:12px; border-radius:10px; }</style>
+</head>
+<body>
+<header class="h-16 bg-slate-900/50 border-b border-slate-700 flex items-center px-6 sticky top-0 z-50">
+    <a href="{{ url_for('dashboard') }}" class="text-xl font-extrabold text-indigo-400">SkillSync</a>
+</header>
+
+<main class="p-8 max-w-4xl mx-auto">
+    <h1 class="text-2xl font-bold">Daily Planner</h1>
+    <p class="text-slate-300">Plan generated from your roadmap. Mark tasks done and Save Progress.</p>
+
+    <div class="mt-6 card">
+        <div class="flex gap-2">
+            <label>Start Date</label>
+            <input id="startDate" type="date" class="px-2 py-1 rounded bg-slate-900/50 border border-slate-700" />
+            <label>Hours/day</label>
+            <input id="hoursPerDay" type="number" min="0.5" step="0.5" value="2" class="w-20 px-2 py-1 rounded bg-slate-900/50 border border-slate-700" />
+            <button id="generatePlanBtn" class="px-3 py-1 bg-indigo-600 rounded">Generate Plan (AI)</button>
+            <button id="savePlanBtn" class="px-3 py-1 bg-emerald-600 rounded">Save Progress</button>
+            <a href="{{ url_for('dashboard') }}" class="px-3 py-1 bg-slate-700 rounded">Back</a>
+        </div>
+
+        <div id="planArea" class="mt-4 space-y-3">
+            {% if plan %}
+                <!-- If server sent an existing plan, show it (server will send plan as JSON context if available) -->
+            {% endif %}
+        </div>
+    </div>
+</main>
+
+<script>
+const EXISTING_PLAN = {{ plan | tojson | default({}) }};
+const ROADMAP = {{ roadmap | tojson | default({}) }};
+
+function renderPlan(plan){
+    const area = document.getElementById('planArea');
+    area.innerHTML = '';
+    if(!plan || !plan.plan || plan.plan.length === 0){
+        area.innerHTML = '<p class="text-slate-300">No plan yet. Use "Generate Plan (AI)".</p>'; return;
+    }
+    plan.plan.forEach((p,i)=>{
+        const div = document.createElement('div');
+        div.className='p-3 bg-slate-900/50 rounded';
+        div.innerHTML = `<div class="flex justify-between"><div><strong>${p.date} ${p.time || ''}</strong> - ${p.title} (${p.duration || p.duration_minutes || p.duration_minutes || 'min'})</div><div><input type="checkbox" class="task-checkbox" data-i="${i}" ${p.done ? 'checked' : ''}></div></div>
+                         <div class="text-slate-300">${p.notes || ''} ${p.resource ? `<a class="text-indigo-300" href="${p.resource}" target="_blank">Resource</a>` : ''}</div>`;
+        area.appendChild(div);
+    });
+    // checkbox listeners
+    area.querySelectorAll('.task-checkbox').forEach(cb=>{
+        cb.addEventListener('change', ()=>{
+            const idx = parseInt(cb.dataset.i);
+            EXISTING_PLAN.plan[idx].done = cb.checked;
+        });
+    });
+}
+
+if(Object.keys(EXISTING_PLAN||{}).length > 0){
+    renderPlan(EXISTING_PLAN);
+}
+
+document.getElementById('generatePlanBtn').addEventListener('click', async ()=>{
+    const startDate = document.getElementById('startDate').value || new Date().toISOString().slice(0,10);
+    const hours = parseFloat(document.getElementById('hoursPerDay').value) || 2;
+    try {
+        const resp = await fetch('/daily_planner', {
+            method:'POST',
+            headers:{'Content-Type':'application/json'},
+            body: JSON.stringify({action:'generate', start_date: startDate, hours})
+        });
+        const data = await resp.json();
+        if(data.error){ alert('AI Error: '+data.error); return; }
+        // save plan locally for edits
+        window.currentPlan = data.plan;
+        renderPlan(data.plan);
+    } catch(e){
+        alert('Network error: ' + e);
+    }
+});
+
+document.getElementById('savePlanBtn').addEventListener('click', async ()=>{
+    const plan = window.currentPlan || EXISTING_PLAN;
+    if(!plan || !plan.plan) { alert('No plan to save'); return; }
+    try {
+        const resp = await fetch('/daily_planner', {
+            method:'POST',
+            headers:{'Content-Type':'application/json'},
+            body: JSON.stringify({action:'save', plan})
+        });
+        const data = await resp.json();
+        if(data.success){ alert('Plan saved'); }
+        else alert('Save failed: '+(data.error||'unknown'));
+    } catch(e){
+        alert('Network error: ' + e);
+    }
+});
+</script>
+</body>
+</html>

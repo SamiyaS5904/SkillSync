@@ -1,241 +1,325 @@
-from flask import Flask, render_template, request, redirect, url_for, session, jsonify, flash
-from datetime import datetime, timedelta
-from dotenv import load_dotenv
-from werkzeug.security import generate_password_hash, check_password_hash
+# main.py
 import os
 import json
-import re 
+import re
+from datetime import datetime
+from functools import wraps
+from dotenv import load_dotenv
+from flask import Flask, render_template, request, redirect, url_for, session, jsonify, flash
+from werkzeug.security import generate_password_hash, check_password_hash
+from pymongo import MongoClient
+from openai import OpenAI  # ✅ New import
 
-# MongoDB helper
-from mongodb_helper import MongoDBHelper
-# Crew orchestrator
-from loader import SkillSyncCrew
-
-# Load env
+# ------------------ Setup ------------------
 load_dotenv()
 
-# Flask app
+MONGO_URI = os.getenv("MONGO_URI")
+OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
+OPENAI_MODEL = os.getenv("OPENAI_MODEL", "gpt-4o-mini")
+SECRET_KEY = os.getenv("SECRET_KEY", "super_secret_key")
+
+if not MONGO_URI:
+    raise EnvironmentError("Please set MONGO_URI in .env")
+if not OPENAI_API_KEY:
+    print("Warning: OPENAI_API_KEY not set. AI calls will fail until you set it.")
+
+# ✅ New OpenAI client (replaces old openai.api_key)
+client = OpenAI(api_key=OPENAI_API_KEY)
+
 app = Flask(__name__)
-app.secret_key = os.getenv("SECRET_KEY", "super_secret_key")
+app.secret_key = SECRET_KEY
 
 # MongoDB setup
-mongo = MongoDBHelper()
-mongo.select_db(db_name="SkillSyncDB", collection="users")
+mongo_client = MongoClient(MONGO_URI)
+db = mongo_client["SkillSyncDB"]
+users_col = db["users"]
+roadmaps_col = db["roadmaps"]
+dailyplans_col = db["daily_plans"]
 
-# Initialize crew once
-crew = SkillSyncCrew()
+# ------------------ Predefined Goals ------------------
+PREDEFINED_GOALS = [
+    "Data Scientist", "AI Engineer", "Data Analyst", "Machine Learning Engineer",
+    "Data Engineer", "Frontend Developer", "Backend Developer", "Fullstack Developer",
+    "DevOps Engineer", "Product Analyst", "UX Designer"
+]
 
+# ------------------ Helper Functions ------------------
+def login_required(f):
+    @wraps(f)
+    def decorated(*args, **kwargs):
+        if "user" not in session:
+            return redirect(url_for("index"))
+        return f(*args, **kwargs)
+    return decorated
 
-# -------- Helper: calculate progress --------
+def safe_json_loads(s):
+    if s is None:
+        return None
+    if isinstance(s, dict):
+        return s
+    try:
+        return json.loads(s)
+    except Exception:
+        m = re.search(r"(\{.*\}|\[.*\])", str(s), re.S)
+        if m:
+            try:
+                return json.loads(m.group(1))
+            except Exception:
+                return None
+        return None
+
 def calculate_progress(roadmap):
     if not roadmap or "milestones" not in roadmap:
-        return 0, []
-    milestone_progress = []
-    total_tasks = 0
-    completed_tasks = 0
-    
-    # Safely convert string output from CrewAI into a usable dictionary
-    if isinstance(roadmap, str):
-         try:
-             roadmap = json.loads(roadmap)
-         except json.JSONDecodeError:
-             return 0, []
-
+        return 0
+    total = 0
+    done = 0
     for m in roadmap.get("milestones", []):
-        m_tasks = m.get("tasks", [])
-        m_completed = sum(1 for t in m_tasks if t.get("done"))
-        m_total = len(m_tasks)
-        percent = int((m_completed / m_total) * 100) if m_total else 0
-        milestone_progress.append(percent)
-        total_tasks += m_total
-        completed_tasks += m_completed
-    overall_progress = int((completed_tasks / total_tasks) * 100) if total_tasks else 0
-    return overall_progress, milestone_progress
+        tasks = m.get("tasks", [])
+        total += len(tasks)
+        done += sum(1 for t in tasks if t.get("done"))
+    return int((done / total) * 100) if total else 0
 
+# ------------------ OpenAI Integration ------------------
+def call_openai_generate_roadmap(goal, skills, hours_per_day=2, months=3):
+    """Call OpenAI to generate structured roadmap JSON."""
+    system_prompt = (
+        "You are a 2025-savvy AI Learning Strategist. Output ONLY JSON. "
+        "Produce a roadmap for the user's goal including milestones, subtopics, resources, projects, weekly_goals, and timeline_overview. "
+        "Use up-to-date 2025 trends. Keep output compact and valid JSON."
+    )
+    user_prompt = (
+        f"Goal: {goal}\n"
+        f"Existing Skills: {skills}\n"
+        f"Available hours/day: {hours_per_day}\n"
+        f"Target duration (months): {months}\n"
+        "Return a JSON object like: {\"goal\":\"...\",\"milestones\":[{\"title\":\"...\",\"subtopics\":[...],"
+        "\"resources\":[...],\"projects\":[...],\"tasks\":[{\"title\":\"...\",\"duration_minutes\":...}] }],"
+        "\"weekly_goals\":[...],\"timeline_overview\":\"...\"}"
+    )
 
-# -------- Landing Page and Auth Routes --------
+    try:
+        resp = client.chat.completions.create(
+            model=OPENAI_MODEL,  # ✅ works with gpt-4o-mini
+            messages=[
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": user_prompt},
+            ],
+            max_tokens=1400,
+            temperature=0.2
+        )
+        text = resp.choices[0].message.content
+        data = safe_json_loads(text)
+        if not data:
+            text2 = re.sub(r"^```json|```$", "", text.strip(), flags=re.I)
+            data = safe_json_loads(text2)
+        if not data:
+            raise ValueError("AI returned unparsable content for roadmap.")
+        return data
+    except Exception as e:
+        raise RuntimeError(f"AI generation failed: {e}")
+
+def call_openai_daily_plan(roadmap, start_date=None, hours_per_day=2):
+    """Generate daily plan using OpenAI."""
+    system = (
+        "You are a helpful planner. Given a structured roadmap JSON, generate a day-wise plan "
+        "for at least 7 days, mapping milestones/tasks into daily activities. Return JSON only."
+    )
+    start_date = start_date or datetime.utcnow().date().isoformat()
+    user_prompt = f"Start date: {start_date}\nHours/day: {hours_per_day}\nRoadmap: {json.dumps(roadmap)}"
+
+    try:
+        resp = client.chat.completions.create(
+            model=OPENAI_MODEL,
+            messages=[
+                {"role": "system", "content": system},
+                {"role": "user", "content": user_prompt},
+            ],
+            max_tokens=1200,
+            temperature=0.2
+        )
+        text = resp.choices[0].message.content
+        data = safe_json_loads(text)
+        if not data:
+            text2 = re.sub(r"^```json|```$", "", text.strip(), flags=re.I)
+            data = safe_json_loads(text2)
+        if not data:
+            raise ValueError("AI daily planner returned unparsable content.")
+        return data
+    except Exception as e:
+        raise RuntimeError(f"AI daily plan failed: {e}")
+
+# ------------------ Routes ------------------
 @app.route("/")
-def home():
+def index():
     return render_template("index_3.html")
 
-def is_strong_password(password):
-    """Checks if password is strong (8+ chars, upper, lower, digit, special)."""
-    if len(password) < 8: return False, "Password must be at least 8 characters long."
-    if not re.search(r"[A-Z]", password): return False, "Password must contain at least one uppercase letter."
-    if not re.search(r"[a-z]", password): return False, "Password must contain at least one lowercase letter."
-    if not re.search(r"\d", password): return False, "Password must contain at least one digit."
-    if not re.search(r"[!@#$%^&*(),.?:{}|<>]", password): return False, "Password must contain at least one special character."
-    return True, "Strong password."
+@app.route("/signup", methods=["POST"])
+def signup():
+    name = request.form.get("name")
+    email = request.form.get("email")
+    password = request.form.get("password")
+    confirm = request.form.get("confirm_password")
+    if not all([name, email, password, confirm]) or password != confirm:
+        flash("Invalid signup form", "error")
+        return redirect(url_for("index"))
+    if users_col.find_one({"email": email}):
+        flash("User exists", "error")
+        return redirect(url_for("index"))
+    hashed = generate_password_hash(password)
+    users_col.insert_one({
+        "name": name,
+        "email": email,
+        "password": hashed,
+        "created_at": datetime.utcnow(),
+        "goal": None,
+        "skills": [],
+        "roadmap": None,
+        "daily_plans": [],
+        "is_admin": False
+    })
+    flash("Signup successful! Please login.", "success")
+    return redirect(url_for("index"))
 
 @app.route("/login", methods=["POST"])
 def login():
-    email, password = request.form.get("email"), request.form.get("password")
-    user = mongo.collection.find_one({"email": email})
+    email = request.form.get("email")
+    password = request.form.get("password")
+    user = users_col.find_one({"email": email})
     if user and check_password_hash(user["password"], password):
         session["user"] = user["email"]
         return redirect(url_for("dashboard"))
     flash("Invalid credentials", "error")
-    return redirect(url_for("home"))
-
-@app.route("/signup", methods=["POST"])
-def signup():
-    name, email, password, confirm = request.form.get("name"), request.form.get("email"), request.form.get("password"), request.form.get("confirm_password")
-    if not all([name, email, password, confirm]) or password != confirm:
-        flash("Invalid signup form: passwords do not match or fields are missing.", "error"); return redirect(url_for("home"))
-    if not is_strong_password(password)[0]:
-        flash(f"Weak password: {is_strong_password(password)[1]}", "error"); return redirect(url_for("home"))
-    if mongo.collection.find_one({"email": email}):
-        flash("User already exists", "error"); return redirect(url_for("home"))
-    
-    hashed_pw = generate_password_hash(password)
-    mongo.insert_document({"name": name, "email": email, "password": hashed_pw, "created_at": datetime.utcnow(), "streak_days": 1, "goal": None, "roadmap": None, "conversations": [], "is_admin": False, "overall_progress": 0 })
-    flash("Signup successful! Please login.", "success"); return redirect(url_for("home"))
-
-@app.route("/admin/signup", methods=["GET", "POST"])
-def admin_signup():
-    if request.method == "GET": return render_template("signup.html")
-    name, email, password, confirm = request.form.get("name"), request.form.get("email"), request.form.get("password"), request.form.get("confirm_password")
-    if email != os.getenv("ADMIN_EMAIL", "admin@skillsync.com"): flash("Invalid email for admin registration.", "error"); return redirect(url_for("home"))
-    if not all([name, email, password, confirm]) or password != confirm: flash("Invalid signup form.", "error"); return redirect(url_for("home"))
-    if mongo.collection.find_one({"email": email}): flash("Admin account already exists.", "error"); return redirect(url_for("home"))
-    hashed_pw = generate_password_hash(password)
-    mongo.insert_document({"name": name, "email": email, "password": hashed_pw, "created_at": datetime.utcnow(), "streak_days": 1, "goal": None, "roadmap": None, "conversations": [], "is_admin": True, "overall_progress": 0 })
-    flash("Admin Signup successful! Please login.", "success"); return redirect(url_for("home"))
-
-def is_user_admin(email): return mongo.collection.find_one({"email": email}) and mongo.collection.find_one({"email": email}).get("is_admin", False)
-
-@app.route("/admin")
-def admin_dashboard():
-    if "user" not in session or not is_user_admin(session["user"]): flash("Access Denied.", "error"); return redirect(url_for("dashboard"))
-    total_users = mongo.collection.count_documents({})
-    onboarded_users = mongo.collection.count_documents({"roadmap": {"$ne": None}})
-    recent_users = list(mongo.collection.find({}, {"name": 1, "email": 1, "created_at": 1, "is_admin": 1}).sort("created_at", -1).limit(5))
-    return render_template("admin_dashboard.html", total_users=total_users, onboarded_users=onboarded_users, recent_users=recent_users)
+    return redirect(url_for("index"))
 
 @app.route("/logout")
-def logout(): session.pop("user", None); return redirect(url_for("home"))
+def logout():
+    session.pop("user", None)
+    return redirect(url_for("index"))
 
+@app.route("/dashboard")
+@login_required
+def dashboard():
+    user = users_col.find_one({"email": session["user"]})
+    user_roadmap = user.get("roadmap") or {"goal": user.get("goal") or "", "milestones": []}
+    user_skills = user.get("skills") or []
+    overall_progress = calculate_progress(user_roadmap)
+    return render_template("dashboard.html",
+                           user=user,
+                           roadmap=user_roadmap,
+                           skills=user_skills,
+                           predefined_goals=PREDEFINED_GOALS,
+                           overall_progress=overall_progress)
 
-# -------- Onboarding Page and Submission (FIXED Serialization) --------
-@app.route("/onboarding", methods=["GET"])
-def onboarding():
-    if "user" not in session: return redirect(url_for("home"))
-    user_doc = mongo.collection.find_one({"email": session["user"]})
-    if user_doc.get("goal"): return redirect(url_for("dashboard"))
-    return render_template("onboarding_form.html")
-
-
-@app.route("/submit_onboarding", methods=["POST"])
-def submit_onboarding():
-    if "user" not in session: return jsonify({"error": "Unauthorized"}), 401
-    
-    data = request.get_json(force=True)
-    goal = data.get("goal")
-    college_year = data.get("college_year") 
-    skills = data.get("skills", [])
-    hours = int(data.get("hours", 2))
-    duration = int(data.get("duration_months", 3))
-
-    if not all([goal, college_year, skills]): return jsonify({"error": "Missing required fields."}), 400
-         
+@app.route("/generate_roadmap", methods=["POST"])
+@login_required
+def generate_roadmap():
+    payload = request.get_json(force=True)
+    goal = payload.get("goal")
+    skills = payload.get("skills", [])
+    hours = int(payload.get("hours", 2))
+    months = int(payload.get("duration_months", 3))
+    if not goal:
+        return jsonify({"error": "Goal required"}), 400
     try:
-        crew_result = crew.orchestrate(goal, skills, hours, duration, True) 
-
-        # --- FIX: SERIALIZE CREW OUTPUT FOR MONGODB ---
-        crew_output_content = crew_result.get("result", "{}") 
-        
-        # 1. Convert the custom CrewOutput object to a string representation
-        roadmap_json_string = str(crew_output_content)
-        
-        # 2. Safely parse the JSON string into a Python dictionary for MongoDB
-        try:
-            roadmap_data = json.loads(roadmap_json_string) 
-        except json.JSONDecodeError:
-            # If the agent returns malformed JSON, save the raw string output as a fallback.
-            roadmap_data = {"result": roadmap_json_string, "error": "Agent output failed to parse as JSON."}
-
-        # 3. This dictionary/safe structure is now safe to save to MongoDB
-        overall_progress, _ = calculate_progress(roadmap_data)
-        
-        mongo.collection.update_one(
-            {"email": session["user"]},
-            {"$set": {
-                "goal": goal, 
-                "college_year": college_year, 
-                "roadmap": roadmap_data, 
-                "overall_progress": overall_progress
-            }}
-        )
-        return jsonify({"success": True, "message": "Onboarding complete. Redirecting..."})
-        
+        roadmap_data = call_openai_generate_roadmap(goal, skills, hours, months)
+        users_col.update_one({"email": session["user"]},
+                             {"$set": {"goal": goal, "skills": skills, "roadmap": roadmap_data}})
+        roadmaps_col.insert_one({
+            "email": session["user"],
+            "roadmap": roadmap_data,
+            "created_at": datetime.utcnow()
+        })
+        return jsonify({"success": True, "roadmap": roadmap_data})
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
+@app.route("/save_roadmap", methods=["POST"])
+@login_required
+def save_roadmap():
+    payload = request.get_json(force=True)
+    roadmap = payload.get("roadmap")
+    if not roadmap:
+        return jsonify({"error": "No roadmap provided"}), 400
+    try:
+        users_col.update_one({"email": session["user"]}, {"$set": {"roadmap": roadmap}})
+        roadmaps_col.insert_one({
+            "email": session["user"],
+            "roadmap": roadmap,
+            "saved_at": datetime.utcnow()
+        })
+        return jsonify({"success": True})
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 
-# -------- Dashboard --------
-@app.route("/dashboard")
-def dashboard():
-    if "user" not in session: return redirect(url_for("home"))
-    user_doc = mongo.collection.find_one({"email": session["user"]})
-    if not user_doc: return redirect(url_for("home"))
-    if not user_doc.get("goal"): return redirect(url_for("onboarding"))
-         
-    overall_progress, milestone_progress = calculate_progress(user_doc.get("roadmap"))
-    
-    missing_skills = []
-    if user_doc.get("roadmap") and user_doc["roadmap"].get("result"):
-        try:
-            roadmap_json = json.loads(user_doc["roadmap"].get("result"))
-            missing_skills = roadmap_json.get("analysis", {}).get("missing_skills", [])
-        except Exception:
-            missing_skills = ["Check Roadmap"] 
-            
-    return render_template("dashboard.html", user=user_doc, overall_progress=overall_progress, milestone_progress=milestone_progress, missing_skills=missing_skills) 
+@app.route("/daily_planner", methods=["GET", "POST"])
+@login_required
+def daily_planner():
+    user = users_col.find_one({"email": session["user"]})
+    if request.method == "GET":
+        daily = dailyplans_col.find_one({"email": session["user"]})
+        plan = daily.get("plan") if daily else None
+        return render_template("daily_planner.html", user=user, plan=plan or {}, roadmap=user.get("roadmap") or {})
+    else:
+        data = request.get_json(force=True)
+        action = data.get("action")
+        if action == "generate":
+            roadmap = user.get("roadmap") or {}
+            start_date = data.get("start_date") or datetime.utcnow().date().isoformat()
+            hours = int(data.get("hours", 2))
+            try:
+                plan = call_openai_daily_plan(roadmap, start_date, hours)
+                dailyplans_col.update_one({"email": session["user"]},
+                                          {"$set": {"email": session["user"], "plan": plan, "created_at": datetime.utcnow()}},
+                                          upsert=True)
+                return jsonify({"success": True, "plan": plan})
+            except Exception as e:
+                return jsonify({"error": str(e)}), 500
+        elif action == "save":
+            plan = data.get("plan")
+            if not plan:
+                return jsonify({"error": "No plan provided"}), 400
+            dailyplans_col.update_one({"email": session["user"]},
+                                      {"$set": {"email": session["user"], "plan": plan, "updated_at": datetime.utcnow()}},
+                                      upsert=True)
+            return jsonify({"success": True})
+        else:
+            return jsonify({"error": "Unknown action"}), 400
 
+@app.route("/admin")
+@login_required
+def admin_panel():
+    user = users_col.find_one({"email": session["user"]})
+    if not user.get("is_admin"):
+        flash("Access denied.", "error")
+        return redirect(url_for("dashboard"))
+    total_users = users_col.count_documents({})
+    total_roadmaps = roadmaps_col.count_documents({})
+    pipeline = [
+        {"$group": {"_id": "$goal", "count": {"$sum": 1}}},
+        {"$sort": {"count": -1}},
+        {"$limit": 10}
+    ]
+    goals = list(users_col.aggregate(pipeline))
+    skills_count = {}
+    for u in users_col.find({}, {"skills": 1}):
+        for s in (u.get("skills") or []):
+            skills_count[s] = skills_count.get(s, 0) + 1
+    top_skills = sorted(skills_count.items(), key=lambda x: x[1], reverse=True)[:20]
+    return render_template("admin.html", total_users=total_users, total_roadmaps=total_roadmaps,
+                           goals=goals, top_skills=top_skills)
 
-# -------- API Endpoints (Fully Defined Functions) --------
+@app.route("/get_roadmap")
+@login_required
+def get_roadmap():
+    user = users_col.find_one({"email": session["user"]})
+    return jsonify({"roadmap": user.get("roadmap") or {}})
 
-@app.route("/orchestrate", methods=["POST"])
-def orchestrate_api():
-    # Placeholder for general orchestration calls
-    return jsonify({"error": "Direct orchestration not implemented here. Use submit_onboarding."})
+@app.route("/get_daily_plan")
+@login_required
+def get_daily_plan():
+    daily = dailyplans_col.find_one({"email": session["user"]})
+    return jsonify({"plan": daily.get("plan") if daily else {}})
 
-@app.route("/api/generate-roadmap", methods=["POST"])
-def api_generate_roadmap():
-    # Placeholder: Call crew.orchestrate again, similar to submit_onboarding logic
-    return jsonify({"error": "Roadmap regeneration API not fully implemented."})
-
-@app.route("/api/generate-plan", methods=["POST"])
-def api_generate_plan():
-    # Placeholder: Call crew.run_daily_plan
-    return jsonify({"error": "Daily plan API not fully implemented."})
-
-@app.route("/api/generate-playlist-plan", methods=["POST"])
-def api_generate_playlist_plan():
-    # Placeholder: Call crew.run_playlist_plan
-    return jsonify({"error": "Playlist plan API not fully implemented."})
-
-@app.route("/api/get-readiness", methods=["GET"])
-def api_get_readiness():
-    # Placeholder: Call crew.run_job_readiness
-    return jsonify({"error": "Readiness API not fully implemented."})
-
-@app.route("/api/reschedule_task", methods=["POST"])
-def api_reschedule_task():
-    # Placeholder for client-side logging (already implemented in main.py)
-    return jsonify({"success": True, "message": "Task marked for next day."})
-
-@app.route("/roadmap")
-def roadmap():
-    # Placeholder for separate roadmap page
-    return jsonify({"error": "Roadmap page not implemented."})
-
-@app.route("/update_task", methods=["POST"])
-def update_task():
-    # Placeholder for task update logic
-    return jsonify({"error": "Update task logic not fully implemented."})
-
-
-# -------- Run App --------
+# ------------------ Run Server ------------------
 if __name__ == "__main__":
-    app.run(debug=True)
+    app.run(debug=True, port=5000)
