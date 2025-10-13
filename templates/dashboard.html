@@ -1,4 +1,3 @@
-<!-- templates/dashboard.html -->
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -8,245 +7,472 @@
 <script src="https://cdn.tailwindcss.com"></script>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
 <style>
-body { background: linear-gradient(120deg,#071028 0%, #0b1220 50%, #111827 100%); }
+/* --- BASE STYLES --- */
+body { 
+    background: linear-gradient(120deg, #070e1c 0%, #0c1426 50%, #151b2e 100%); 
+    font-family: 'Inter', sans-serif; 
+    overflow-x: hidden; 
+}
 .glass { backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); }
-.milestone-card { background: rgba(17,24,39,0.6); border: 1px solid rgba(148,163,184,0.06); padding: 12px; border-radius: 10px; }
-.subtopic { padding:6px; border-radius:6px; background: rgba(255,255,255,0.02); }
-.checkbox-tick { width:18px; height:18px; border-radius:4px; display:inline-block; border:1px solid rgba(255,255,255,0.12); margin-right:8px; vertical-align:middle; }
+
+/* --- NAVIGATION STYLES FOR EXPAND/COLLAPSE (REFINED) --- */
+#left-sidebar {
+    width: 280px; 
+    transition: width 0.3s ease-in-out;
+    flex-shrink: 0;
+    z-index: 40; /* Ensure sidebar is above main content */
+    position: fixed;
+    top: 64px; /* Below the header */
+    height: calc(100vh - 64px);
+}
+#left-sidebar.collapsed {
+    width: 80px; 
+}
+#main-content-wrapper {
+    /* Adjusted to respect fixed header and sidebar width */
+    margin-left: 280px; 
+    width: calc(100% - 280px);
+    transition: margin-left 0.3s ease-in-out, width 0.3s ease-in-out;
+    min-height: calc(100vh - 64px);
+    padding-top: 10px; 
+}
+#main-content-wrapper.collapsed {
+    margin-left: 80px;
+    width: calc(100% - 80px);
+}
+#sidebar-label {
+    opacity: 1;
+    transition: opacity 0.3s ease-in-out;
+}
+#left-sidebar.collapsed #sidebar-label {
+    opacity: 0;
+    width: 0;
+    overflow: hidden;
+    white-space: nowrap;
+}
+#sidebar-toggle-btn {
+    position: absolute;
+    top: 20px;
+    right: -12px;
+    transform: translateY(0%);
+    z-index: 50;
+}
+
+/* --- MILESTONE & CHECKBOX STYLES --- */
+.milestone-card { 
+    background: #1e293b; 
+    border: 1px solid #334155; 
+    padding: 24px; 
+    border-radius: 12px; 
+    transition: all 0.2s ease-in-out; 
+}
+.milestone-card:hover {
+    transform: translateY(-2px); 
+    border-color: #4f46e5; 
+    box-shadow: 0 8px 15px rgba(0, 0, 0, 0.3); 
+}
+.milestone-card input:focus, .milestone-card textarea:focus {
+    outline: none;
+    border-color: #4f46e5; 
+}
+
+.checkbox-tick { 
+    width: 20px; 
+    height: 20px; 
+    border-radius: 4px; 
+    display: inline-block; 
+    border: 1px solid #475569; 
+    background-color: #334155; 
+    margin-right: 8px; 
+    vertical-align: middle; 
+    appearance: none;
+    cursor: pointer;
+    position: relative;
+    transition: background-color 0.2s;
+}
+.checkbox-tick:checked {
+    background-color: #4f46e5; 
+    border-color: #4f46e5;
+}
+.checkbox-tick:checked::after {
+    content: '\f00c'; 
+    font-family: 'Font Awesome 6 Free'; 
+    font-weight: 900;
+    color: white;
+    font-size: 12px;
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+}
 </style>
 </head>
 <body>
-<header class="h-16 bg-slate-900/50 border-b border-slate-700 flex items-center px-6 sticky top-0 z-50">
-    <a href="{{ url_for('dashboard') }}" class="text-xl font-extrabold bg-clip-text text-transparent bg-gradient-to-r from-indigo-400 to-pink-400">SkillSync</a>
+<header class="h-16 bg-slate-900/80 border-b border-indigo-700 flex items-center px-8 sticky top-0 z-50 shadow-lg">
+    <a href="{{ url_for('dashboard') }}" class="text-2xl font-extrabold bg-clip-text text-transparent bg-gradient-to-r from-teal-300 to-sky-400 tracking-wider">SkillSync<span class="text-sm align-top ml-1 opacity-70">AI</span></a>
     <div class="ml-auto flex items-center gap-4">
-        <a href="{{ url_for('logout') }}" class="text-sm text-rose-400 hover:text-rose-300"><i class="fa-solid fa-right-from-bracket mr-1"></i> Logout</a>
+        <a href="{{ url_for('logout') }}" class="text-sm text-rose-400 hover:text-rose-300 transition duration-150 p-2 rounded-lg hover:bg-slate-700/50"><i class="fa-solid fa-right-from-bracket mr-1"></i> Logout</a>
     </div>
 </header>
 
-<div class="flex">
-    <!-- Sidebar -->
-    <nav class="w-64 p-4 bg-slate-900/60 min-h-screen border-r border-slate-800">
-        <div class="space-y-6">
-            <div class="text-white font-bold">Menu</div>
-            <a href="{{ url_for('dashboard') }}" class="block text-slate-200 py-2">Dashboard</a>
-            <a href="{{ url_for('daily_planner') }}" class="block text-slate-200 py-2">Daily Planner</a>
-            <a href="{{ url_for('admin_panel') }}" class="block text-slate-200 py-2">Admin Panel</a>
+<div class="flex min-h-[calc(100vh-64px)]">
+    <nav id="left-sidebar" class="p-6 bg-slate-900/90 border-r border-indigo-900 shadow-xl">
+        <div class="space-y-2 pt-4">
+            <div id="sidebar-label" class="text-sm font-semibold text-slate-400 uppercase tracking-wider mb-4 border-b border-slate-700 pb-2">Menu</div>
+            
+            <a href="{{ url_for('dashboard') }}" class="flex items-center gap-3 text-white font-medium bg-indigo-600 hover:bg-indigo-700 py-3 px-4 rounded-lg transition duration-150 shadow-md">
+                <i class="fa-solid fa-chart-line w-5"></i> <span id="sidebar-label">Dashboard</span>
+            </a>
+            
+            <a href="{{ url_for('daily_planner') }}" class="flex items-center gap-3 text-slate-300 hover:text-white hover:bg-slate-800 py-3 px-4 rounded-lg transition duration-150">
+                <i class="fa-solid fa-calendar-day w-5"></i> <span id="sidebar-label">Daily Tasks</span>
+            </a>
+
+            <a href="#" class="flex items-center gap-3 text-slate-300 hover:text-white hover:bg-slate-800 py-3 px-4 rounded-lg transition duration-150">
+                <i class="fa-solid fa-briefcase w-5"></i> <span id="sidebar-label">Job Matcher</span>
+            </a>
         </div>
+        
+        <button id="sidebar-toggle-btn" class="w-6 h-6 bg-indigo-600 hover:bg-indigo-700 rounded-full text-white text-xs flex items-center justify-center border border-slate-900 focus:outline-none transition duration-150 shadow-lg">
+            <i class="fa-solid fa-chevron-left" id="toggle-icon"></i>
+        </button>
     </nav>
 
-    <!-- Main -->
-    <main class="flex-1 p-8 max-w-6xl mx-auto">
-        <h1 class="text-3xl font-bold text-white">Hi, {{ user.name }} 👋</h1>
-        <p class="text-slate-400 mt-1">Goal: <span class="text-indigo-300 font-medium">{{ user.goal or 'Not set' }}</span></p>
+    <main id="main-content-wrapper" class="grid grid-cols-12 gap-8 p-10 max-w-full"> 
 
-        <!-- Controls -->
-        <div class="mt-6 glass bg-slate-800/50 border border-slate-700 rounded-2xl p-4">
-            <div class="grid md:grid-cols-3 gap-4">
-                <div>
-                    <label class="text-sm text-slate-300">Select Goal</label>
-                    <select id="goalSelect" class="w-full mt-1 px-3 py-2 rounded bg-slate-900/50 border border-slate-700 text-white">
-                        <option value="">-- Choose a Goal --</option>
-                        {% for g in predefined_goals %}
-                        <option value="{{ g }}" {% if g == user.goal %}selected{% endif %}>{{ g }}</option>
-                        {% endfor %}
-                        <option value="custom">Custom Goal...</option>
-                    </select>
-                    <input id="customGoalInput" placeholder="Enter custom goal" class="mt-2 w-full px-3 py-2 rounded bg-slate-900/50 border border-slate-700 text-white hidden" />
+        <section class="col-span-12 lg:col-span-8">
+            <h1 class="text-4xl font-extrabold text-white mb-1">
+                Hi, <span class="text-indigo-400">{{ user.name }}</span>
+            </h1>
+            <p class="text-slate-400 text-lg mb-6">
+                Your Career Goal: <span class="text-teal-400 font-semibold">{{ user.goal or 'Not set' }}</span>
+            </p>
+
+            <div class="glass bg-slate-800/70 border border-slate-700 rounded-xl p-6 shadow-2xl">
+                <h2 class="text-xl font-semibold text-white mb-4 border-b border-slate-700/50 pb-2"><i class="fa-solid fa-sliders me-2 text-indigo-400"></i> Roadmap Configuration</h2>
+                <div class="grid md:grid-cols-3 gap-6">
+                    <div>
+                        <label class="text-sm text-slate-300 font-medium block mb-1">Select Goal</label>
+                        <select id="goalSelect" class="w-full px-4 py-2.5 rounded-lg bg-slate-900/70 border border-slate-700 text-white focus:ring-indigo-500 focus:border-indigo-500 transition duration-150">
+                            <option value="" class="bg-slate-800">-- Choose a Goal --</option>
+                            {% for g in predefined_goals %}
+                            <option value="{{ g }}" {% if g == user.goal %}selected{% endif %} class="bg-slate-800">{{ g }}</option>
+                            {% endfor %}
+                            <option value="custom" class="bg-slate-800">Custom Goal...</option>
+                        </select>
+                        <input id="customGoalInput" placeholder="Enter custom goal" class="mt-2 w-full px-4 py-2.5 rounded-lg bg-slate-900/70 border border-slate-700 text-white focus:ring-indigo-500 focus:border-indigo-500 transition duration-150 hidden" />
+                    </div>
+
+                    <div class="md:col-span-2">
+                        <label class="text-sm text-slate-300 font-medium block mb-1">Current Skills</label>
+                        <input id="skillsInput" type="hidden" value="{{ (skills | join(', ')) if skills else '' }}" /> 
+                        
+                        <div id="skills-display" class="w-full min-h-10 p-2 mb-2 rounded-lg bg-slate-900/70 border border-slate-700 flex flex-wrap items-start content-start gap-1">
+                            <p id="no-skills-msg" class="text-slate-500 text-sm italic py-1 px-2">No skills selected.</p>
+                        </div>
+                        
+                        <div class="flex gap-2">
+                            <select id="skill-add-select" class="flex-1 px-3 py-2.5 rounded-lg bg-slate-900/70 border border-slate-700 text-white focus:ring-indigo-500 focus:border-indigo-500 transition duration-150">
+                                <option value="" class="bg-slate-800">-- Add a Common Skill --</option>
+                                <option value="Python" class="bg-slate-800">Python</option>
+                                <option value="SQL" class="bg-slate-800">SQL</option>
+                                <option value="JavaScript" class="bg-slate-800">JavaScript</option>
+                                <option value="React" class="bg-slate-800">React</option>
+                                <option value="Data Analysis" class="bg-slate-800">Data Analysis</option>
+                                <option value="Cloud (AWS/Azure)" class="bg-slate-800">Cloud (AWS/Azure)</option>
+                                <option value="custom">Custom Skill...</option>
+                            </select>
+                            <button id="add-skill-btn" class="px-4 py-2.5 text-white font-semibold bg-indigo-600 hover:bg-indigo-700 rounded-lg transition duration-150 text-sm">Add</button>
+                        </div>
+                        <input id="custom-skill-input" placeholder="Enter custom skill name" class="mt-2 w-full px-4 py-2.5 rounded-lg bg-slate-900/70 border border-slate-700 text-white focus:ring-indigo-500 focus:border-indigo-500 transition duration-150 hidden" />
+                    </div>
                 </div>
 
-                <div>
-                    <label class="text-sm text-slate-300">Current Skills (comma separated)</label>
-                    <input id="skillsInput" value="{{ (skills | join(', ')) if skills else '' }}" class="w-full mt-1 px-3 py-2 rounded bg-slate-900/50 border border-slate-700 text-white" />
-                </div>
-
-                <div>
-                    <label class="text-sm text-slate-300">Hours/day</label>
-                    <input id="hoursInput" type="number" min="0.5" step="0.5" value="2" class="w-full mt-1 px-3 py-2 rounded bg-slate-900/50 border border-slate-700 text-white" />
-                    <label class="text-sm text-slate-300 mt-2 block">Duration (months)</label>
-                    <input id="monthsInput" type="number" min="1" step="1" value="3" class="w-full mt-1 px-3 py-2 rounded bg-slate-900/50 border border-slate-700 text-white" />
+                <div class="mt-6 flex gap-3 pt-4 border-t border-slate-700/50">
+                    <button id="generateBtn" class="flex-1 flex justify-center items-center px-6 py-2.5 text-white font-semibold bg-indigo-600 hover:bg-indigo-700 rounded-lg shadow-md transition duration-150">
+                        Generate Roadmap
+                    </button>
+                    <button id="saveBtn" class="flex-1 flex justify-center items-center px-6 py-2.5 text-white font-semibold bg-emerald-600 hover:bg-emerald-700 rounded-lg shadow-md transition duration-150">
+                        Save Roadmap
+                    </button>
+                    <button id="regenerateBtn" class="flex-1 flex justify-center items-center px-6 py-2.5 text-white font-semibold bg-sky-700 hover:bg-sky-600 rounded-lg shadow-md transition duration-150">
+                        Regenerate
+                    </button>
                 </div>
             </div>
 
-            <div class="mt-4 flex gap-2">
-                <button id="generateBtn" class="px-4 py-2 bg-indigo-600 rounded">Generate Roadmap (AI)</button>
-                <button id="regenerateBtn" class="px-4 py-2 bg-slate-700 rounded">Regenerate</button>
-                <button id="saveBtn" class="px-4 py-2 bg-emerald-600 rounded">Save Roadmap</button>
-                <button id="toDailyBtn" class="px-4 py-2 bg-pink-600 rounded">Start Daily Planner</button>
-            </div>
-        </div>
-
-        <!-- Roadmap area -->
-        <section class="mt-6">
-            <h2 class="text-xl font-bold text-white">Roadmap</h2>
-            <div id="roadmapArea" class="mt-4 space-y-4">
-                <!-- Rendered by JS -->
+            <div class="mt-10">
+                <h2 class="text-2xl font-bold text-white mb-5"><i class="fa-solid fa-calendar-check me-2 text-teal-400"></i> Weekly Milestones & Tasks</h2>
+                <div id="roadmapArea" class="mt-4 space-y-6">
+                    </div>
             </div>
         </section>
+
+        <aside class="col-span-12 lg:col-span-4 lg:sticky top-24 h-fit space-y-6">
+            <h3 class="text-xl font-bold text-white mb-4 border-b border-slate-700 pb-2"><i class="fa-solid fa-bullseye me-2 text-yellow-400"></i> Progress Focus</h3>
+
+            <div id="progress-focus-content" class="space-y-6">
+                </div>
+        </aside>
+
     </main>
 </div>
 
 <script>
 const INITIAL_ROADMAP = {{ roadmap | tojson | default({}) }};
 const INITIAL_SKILLS = {{ skills | tojson | default([]) }};
+let currentSkills = INITIAL_SKILLS; 
+let currentRoadmap = INITIAL_ROADMAP;
 
-function createMilestoneCard(m, index){
-    const div = document.createElement('div');
-    div.className = 'milestone-card';
-    const title = m.title || `Milestone ${index+1}`;
-    const desc = m.description || '';
-    let tasks = m.tasks || (m.subtopics ? m.subtopics.map(st=>({title: st})) : []);
-    // Header + edit
-    div.innerHTML = `
-      <div class="flex justify-between items-start">
-        <div>
-          <input class="text-xl font-semibold bg-transparent border-0 text-white" value="${escapeHtml(title)}" />
-          <p class="text-slate-400 mt-1"><textarea class="w-full mt-2 bg-transparent text-slate-300 border-0" rows="2">${escapeHtml(desc)}</textarea></p>
-        </div>
-      </div>
-      <div class="mt-3">
-        <strong class="text-slate-300">Subtopics / Tasks</strong>
-        <ul class="mt-2 space-y-1" id="tasks-${index}"></ul>
-        <div class="mt-2 flex gap-2">
-          <input placeholder="Add task" class="new-task-input px-2 py-1 rounded bg-slate-900/50 border border-slate-700 text-white" />
-          <button class="add-task-btn px-2 py-1 bg-indigo-600 rounded">Add</button>
-        </div>
-        <div class="mt-3"><strong class="text-slate-300">Projects</strong><div class="projects mt-2"></div></div>
-      </div>
-    `;
-    // fill tasks
-    const tasksUl = div.querySelector(`#tasks-${index}`);
-    function renderTasks(){
-        tasksUl.innerHTML='';
-        tasks.forEach((t,i)=>{
-            const li = document.createElement('li');
-            li.className = 'flex items-center gap-3';
-            // custom tick box element (no emoji)
-            const cb = document.createElement('input');
-            cb.type = 'checkbox';
-            cb.className = 'checkbox-tick';
-            cb.checked = !!t.done;
-            cb.addEventListener('change', ()=>{ t.done = cb.checked; });
-            const span = document.createElement('span');
-            span.contentEditable = true;
-            span.innerText = t.title || '';
-            span.className = 'text-slate-200';
-            span.addEventListener('input', ()=>{ t.title = span.innerText; });
-            const removeBtn = document.createElement('button');
-            removeBtn.className = 'text-rose-400 px-2';
-            removeBtn.innerText = 'Remove';
-            removeBtn.addEventListener('click', ()=> { tasks.splice(i,1); renderTasks(); });
-            li.appendChild(cb);
-            li.appendChild(span);
-            li.appendChild(removeBtn);
-            tasksUl.appendChild(li);
-        });
+// --- DOM ELEMENTS ---
+const sidebar = document.getElementById('left-sidebar');
+const mainContainerWrapper = document.getElementById('main-content-wrapper');
+const toggleBtn = document.getElementById('sidebar-toggle-btn');
+const toggleIcon = document.getElementById('toggle-icon');
+const roadmapArea = document.getElementById('roadmapArea');
+const progressFocusContent = document.getElementById('progress-focus-content');
+const skillsInputHidden = document.getElementById('skillsInput');
+const skillsDisplay = document.getElementById('skills-display');
+const skillAddSelect = document.getElementById('skill-add-select');
+const addSkillBtn = document.getElementById('add-skill-btn');
+const customSkillInput = document.getElementById('custom-skill-input');
+const noSkillsMsg = document.getElementById('no-skills-msg');
+
+
+// --- UI RENDERING FUNCTIONS ---
+
+function renderProgressFocus() {
+    progressFocusContent.innerHTML = '';
+    
+    if (currentRoadmap.milestones && currentRoadmap.milestones.length > 0) {
+        // STATE 1: Roadmap Exists - Show Real Progress Cards
+        progressFocusContent.innerHTML = `
+            <div class="bg-slate-800/70 border border-slate-700 rounded-xl p-5 shadow-lg cursor-pointer hover:border-indigo-500 transition duration-150">
+                <p class="text-sm font-semibold text-slate-400 uppercase">Daily Focus</p>
+                <h4 class="text-lg text-white mt-1">
+                    ${currentRoadmap.milestones[0].tasks[0].title || 'No tasks found'}
+                </h4>
+                <div class="text-xs text-slate-500 mt-2">1/3 Tasks Completed (Placeholder)</div>
+            </div>
+
+            <div class="bg-slate-800/70 border border-slate-700 rounded-xl p-5 shadow-lg cursor-pointer hover:border-indigo-500 transition duration-150">
+                <p class="text-sm font-semibold text-slate-400 uppercase">Weekly Goal</p>
+                <h4 class="text-lg text-white mt-1">
+                    ${currentRoadmap.milestones[0].title || 'No weekly goal'}
+                </h4>
+                <div class="text-xs text-slate-500 mt-2">Days Remaining: 3 (Placeholder)</div>
+            </div>
+
+            <div class="bg-slate-800/70 border border-slate-700 rounded-xl p-5 shadow-lg cursor-pointer hover:border-indigo-500 transition duration-150">
+                <p class="text-sm font-semibold text-slate-400 uppercase">Resource Hub</p>
+                <a href="#" class="text-indigo-400 hover:text-indigo-300 transition duration-150 block mt-1">
+                    <i class="fa-solid fa-book-open mr-2"></i> Access Learning Materials
+                </a>
+                <a href="#" class="text-indigo-400 hover:text-indigo-300 transition duration-150 block mt-1">
+                    <i class="fa-solid fa-briefcase mr-2"></i> Find Internships
+                </a>
+            </div>
+        `;
+    } else {
+        // STATE 2: No Roadmap - Show Resource Hub/Links
+        progressFocusContent.innerHTML = `
+            <div class="bg-slate-800/70 border border-slate-700 rounded-xl p-5 shadow-lg">
+                <p class="text-sm font-semibold text-slate-400 uppercase mb-3">Next Steps: Resources</p>
+                <p class="text-slate-300 text-sm mb-3">Generate your roadmap to see your daily progress here.</p>
+                
+                <a href="#" class="text-teal-400 hover:text-teal-300 transition duration-150 block mt-1">
+                    <i class="fa-solid fa-book-open mr-2"></i> **Resource Hub**
+                </a>
+                <a href="#" class="text-teal-400 hover:text-teal-300 transition duration-150 block mt-1">
+                    <i class="fa-solid fa-briefcase mr-2"></i> Internship Platforms
+                </a>
+            </div>
+        `;
     }
-    renderTasks();
-    // add-task
-    div.querySelector('.add-task-btn').addEventListener('click', ()=>{
-        const input = div.querySelector('.new-task-input');
-        const val = input.value.trim();
-        if(val){ tasks.push({title: val}); input.value=''; renderTasks(); }
-    });
-    // projects placeholder
-    const projectsDiv = div.querySelector('.projects');
-    (m.projects || []).forEach(p=>{ const pEl = document.createElement('div'); pEl.className='text-slate-300'; pEl.innerText = '- ' + p; projectsDiv.appendChild(pEl); });
-
-    // attach data back
-    div.getRoadmapStruct = () => {
-        return {
-            title: div.querySelector('input').value.trim(),
-            description: div.querySelector('textarea').value.trim(),
-            tasks: tasks,
-            projects: m.projects || [],
-            resources: m.resources || []
-        };
-    };
-    return div;
-}
-
-function escapeHtml(unsafe) {
-    if(!unsafe) return '';
-    return unsafe.replace(/[&<>"']/g, function(m) { return ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'})[m]; });
 }
 
 function renderRoadmap(data){
-    const area = document.getElementById('roadmapArea');
-    area.innerHTML='';
+    roadmapArea.innerHTML = '';
     const milestones = data.milestones || [];
-    if(milestones.length === 0){
-        area.innerHTML = '<p class="text-slate-400">No roadmap found. Click "Generate Roadmap (AI)".</p>';
+    
+    if (milestones.length === 0) {
+        roadmapArea.innerHTML = '<p class="text-slate-400 p-4 border border-slate-700 rounded-lg bg-slate-800/50 text-center"><i class="fa-solid fa-lightbulb me-2 text-yellow-400"></i> Start your journey by configuring your goal above and clicking "Generate Roadmap".</p>';
         return;
     }
+    
     milestones.forEach((m,i)=>{
         const card = createMilestoneCard(m,i);
-        area.appendChild(card);
+        roadmapArea.appendChild(card);
     });
 }
 
-let currentRoadmap = INITIAL_ROADMAP || {milestones: []};
-renderRoadmap(currentRoadmap);
 
-// UI interactions
-document.getElementById('goalSelect').addEventListener('change', (e)=>{
-    if(e.target.value === 'custom'){
-        document.getElementById('customGoalInput').classList.remove('hidden');
+// --- INITIAL RENDERS ---
+updateSkillsDisplay();
+renderRoadmap(currentRoadmap);
+renderProgressFocus();
+
+
+// --- SKILLS INPUT LOGIC ---
+
+function updateSkillsDisplay() {
+    skillsDisplay.innerHTML = '';
+    
+    if (currentSkills.length === 0) {
+        skillsDisplay.appendChild(noSkillsMsg);
+        noSkillsMsg.classList.remove('hidden');
     } else {
-        document.getElementById('customGoalInput').classList.add('hidden');
+        noSkillsMsg.classList.add('hidden');
+        currentSkills.forEach((skill, index) => {
+            const tag = document.createElement('span');
+            tag.className = 'inline-flex items-center text-sm font-medium bg-indigo-500 text-white rounded-full px-3 py-1 mr-2 mb-1';
+            tag.innerHTML = `${escapeHtml(skill)} 
+                <button class="ml-2 text-indigo-100 hover:text-white focus:outline-none" data-index="${index}">
+                    <i class="fa-solid fa-xmark text-xs"></i>
+                </button>`;
+            
+            tag.querySelector('button').addEventListener('click', (e) => {
+                const idx = parseInt(e.currentTarget.getAttribute('data-index'));
+                currentSkills.splice(idx, 1);
+                updateSkillsDisplay();
+            });
+            skillsDisplay.appendChild(tag);
+        });
+    }
+    skillsInputHidden.value = currentSkills.join(', ');
+}
+
+skillAddSelect.addEventListener('change', (e) => {
+    if (e.target.value === 'custom') {
+        customSkillInput.classList.remove('hidden');
+        addSkillBtn.textContent = 'Add Custom';
+    } else {
+        customSkillInput.classList.add('hidden');
+        addSkillBtn.textContent = 'Add';
     }
 });
 
-document.getElementById('generateBtn').addEventListener('click', async ()=>{
+addSkillBtn.addEventListener('click', () => {
+    let skill = '';
+    const selected = skillAddSelect.value;
+    
+    if (selected === 'custom') {
+        skill = customSkillInput.value.trim();
+        customSkillInput.value = ''; 
+        customSkillInput.classList.add('hidden');
+        skillAddSelect.value = ''; 
+    } else if (selected && selected !== '-- Add a Common Skill --') {
+        skill = selected;
+        skillAddSelect.value = ''; 
+    }
+    
+    if (skill && !currentSkills.includes(skill)) {
+        currentSkills.push(skill);
+        updateSkillsDisplay();
+    }
+});
+
+
+// --- SIDEBAR EXPANDABLE LOGIC ---
+
+toggleBtn.addEventListener('click', () => {
+    const isCollapsed = sidebar.classList.toggle('collapsed');
+    mainContainerWrapper.classList.toggle('collapsed');
+    
+    if (isCollapsed) {
+        toggleIcon.classList.replace('fa-chevron-left', 'fa-chevron-right');
+    } else {
+        toggleIcon.classList.replace('fa-chevron-right', 'fa-chevron-left');
+    }
+});
+
+
+// --- AJAX/ROADMAP GENERATION LOGIC ---
+
+document.getElementById('generateBtn').addEventListener('click', async (e)=>{
     const sel = document.getElementById('goalSelect').value;
     const goal = sel === 'custom' ? document.getElementById('customGoalInput').value.trim() : sel;
     const skillsInput = document.getElementById('skillsInput').value.split(',').map(s=>s.trim()).filter(Boolean);
     const hours = parseFloat(document.getElementById('hoursInput').value) || 2;
     const months = parseInt(document.getElementById('monthsInput').value) || 3;
     if(!goal){ alert('Please select or enter a goal'); return; }
-    // call backend to generate
+
+    const btn = e.currentTarget;
+    const originalContent = btn.innerHTML;
+    
+    // START LOADING STATE
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-2"></i> Generating...';
+    roadmapArea.innerHTML = '<p class="text-2xl text-center text-indigo-400 p-8"><i class="fa-solid fa-gear fa-spin mr-3"></i> AI Agents are working... Building your roadmap!</p>';
+
+
     try {
-        const resp = await fetch('/generate_roadmap', {
+        const resp = await fetch('{{ url_for("generate_roadmap") }}', {
             method:'POST',
             headers:{'Content-Type':'application/json'},
             body: JSON.stringify({goal, skills: skillsInput, hours, duration_months: months})
         });
         const data = await resp.json();
+
+        // STOP LOADING STATE
+        btn.innerHTML = originalContent; 
+        btn.disabled = false; 
+
         if(data.error){
-            alert('AI Error: '+data.error);
+            roadmapArea.innerHTML = `<p class="text-center text-rose-400 p-8"><i class="fa-solid fa-triangle-exclamation mr-2"></i> AI Error: ${data.error}</p>`;
             return;
         }
         currentRoadmap = data.roadmap;
         renderRoadmap(currentRoadmap);
+        renderProgressFocus(); // Update progress sidebar!
         alert('Roadmap generated!');
     } catch(err){
-        alert('Network error: ' + err);
+        btn.innerHTML = originalContent; 
+        btn.disabled = false; 
+        roadmapArea.innerHTML = `<p class="text-center text-rose-400 p-8"><i class="fa-solid fa-bug mr-2"></i> Network error: ${err.message || err}</p>`;
     }
 });
 
-document.getElementById('regenerateBtn').addEventListener('click', async ()=>{
-    // regenerate using same goal/skills
+document.getElementById('regenerateBtn').addEventListener('click', async (e)=>{
     const sel = document.getElementById('goalSelect').value;
     const goal = sel === 'custom' ? document.getElementById('customGoalInput').value.trim() : sel;
     const skillsInput = document.getElementById('skillsInput').value.split(',').map(s=>s.trim()).filter(Boolean);
     if(!goal){ alert('Select goal first'); return; }
+
+    const btn = e.currentTarget;
+    const originalContent = btn.innerHTML;
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-2"></i> Regenerating...';
+    roadmapArea.innerHTML = '<p class="text-2xl text-center text-indigo-400 p-8"><i class="fa-solid fa-gear fa-spin mr-3"></i> AI Agents are working... Building your roadmap!</p>';
+
+
     try {
-        const resp = await fetch('/generate_roadmap', {
+        const resp = await fetch('{{ url_for("generate_roadmap") }}', {
             method:'POST',
             headers:{'Content-Type':'application/json'},
             body: JSON.stringify({goal, skills: skillsInput, hours: 2, duration_months: 3})
         });
         const data = await resp.json();
-        if(data.error){ alert('AI Error: '+data.error); return; }
+
+        btn.innerHTML = originalContent; 
+        btn.disabled = false; 
+
+        if(data.error){ 
+             roadmapArea.innerHTML = `<p class="text-center text-rose-400 p-8"><i class="fa-solid fa-triangle-exclamation mr-2"></i> AI Error: ${data.error}</p>`;
+             return; 
+        }
         currentRoadmap = data.roadmap;
         renderRoadmap(currentRoadmap);
+        renderProgressFocus(); // Update progress sidebar!
         alert('Roadmap regenerated!');
     } catch(e){
-        alert('Network error: '+e);
+        btn.innerHTML = originalContent; 
+        btn.disabled = false; 
+        roadmapArea.innerHTML = `<p class="text-center text-rose-400 p-8"><i class="fa-solid fa-bug mr-2"></i> Network error: ${e.message || e}</p>`;
     }
 });
 
 document.getElementById('saveBtn').addEventListener('click', async ()=>{
-    // collect roadmap from cards
     const area = document.getElementById('roadmapArea');
     const cards = area.children;
     const newRoadmap = { goal: (document.getElementById('goalSelect').value === 'custom' ? document.getElementById('customGoalInput').value : document.getElementById('goalSelect').value), milestones: [] };
@@ -256,7 +482,7 @@ document.getElementById('saveBtn').addEventListener('click', async ()=>{
         }
     }
     try {
-        const resp = await fetch('/save_roadmap', {
+        const resp = await fetch('{{ url_for("save_roadmap") }}', {
             method:'POST',
             headers:{'Content-Type':'application/json'},
             body: JSON.stringify({roadmap: newRoadmap})
@@ -273,9 +499,153 @@ document.getElementById('saveBtn').addEventListener('click', async ()=>{
     }
 });
 
-document.getElementById('toDailyBtn').addEventListener('click', ()=>{
-    window.location.href = "/daily_planner";
-});
+// --- CORE MILESTONE CARD LOGIC (UPDATED FOR RESOURCE CLEANUP) ---
+
+function createMilestoneCard(m, index){
+    const div = document.createElement('div');
+    div.className = 'milestone-card-wrapper';
+    const title = m.title || `Milestone ${index+1}`;
+    const desc = m.description || '';
+    let tasks = m.tasks || (m.subtopics ? m.subtopics.map(st=>({title: st})) : []);
+    
+    const completedTasks = tasks.filter(t => t.done).length;
+    const totalTasks = tasks.length;
+    const progressPercent = totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0;
+    const progressColor = progressPercent < 30 ? 'bg-rose-500' : progressPercent < 70 ? 'bg-amber-500' : 'bg-emerald-500';
+
+    const projectTextColor = 'text-yellow-400';
+    const projectBgColor = 'bg-yellow-900/30';
+
+    div.innerHTML = `
+      <h3 class="text-lg font-semibold text-teal-400 mb-2 mt-4"><i class="fa-solid fa-thumbtack me-2"></i> Week ${index + 1} Focus</h3>
+
+      <div class="milestone-card">
+        <div class="flex justify-between items-start mb-4 border-b border-slate-600 pb-3">
+            <div>
+                <input class="text-2xl font-extrabold bg-transparent border-0 text-white p-0 m-0 w-full focus:ring-0" value="${escapeHtml(title)}" oninput="this.style.width = ((this.value.length + 1) * 12) + 'px';" style="width: ${((title.length + 1) * 12)}px; min-width: 100%;" />
+                <p class="text-slate-400 mt-2">
+                    <textarea class="w-full mt-1 bg-transparent text-slate-300 border-0 p-0 focus:ring-0 resize-none" rows="2" placeholder="Milestone Description">${escapeHtml(desc)}</textarea>
+                </p>
+            </div>
+            <div class="text-right flex flex-col items-end">
+                 <span class="text-sm font-semibold text-slate-300 mb-1">Weekly Completion</span>
+                 <div class="w-24 bg-slate-700 rounded-full h-3">
+                    <div class="${progressColor} h-3 rounded-full transition-all duration-500" style="width: ${progressPercent}%"></div>
+                 </div>
+                 <span class="text-sm mt-1 font-extrabold text-white">${progressPercent}%</span>
+            </div>
+        </div>
+        
+        <div class="mt-4 grid md:grid-cols-2 gap-6">
+          <div>
+              <strong class="text-slate-300 text-lg mb-2 block"><i class="fa-solid fa-clipboard-list mr-2 text-indigo-400"></i> Subtopics / Tasks</strong>
+              <ul class="mt-2 space-y-2" id="tasks-${index}"></ul>
+              <div class="mt-3 flex gap-2">
+                <input placeholder="Add new task..." class="new-task-input flex-1 px-3 py-1.5 rounded bg-slate-900 border border-slate-700 text-white placeholder-slate-500 focus:border-indigo-500" />
+                <button class="add-task-btn px-4 py-1.5 text-sm bg-indigo-600 hover:bg-indigo-700 rounded-lg transition duration-150">Add</button>
+              </div>
+          </div>
+          
+          <div>
+              <div class="mb-4 p-4 rounded-lg ${projectBgColor} border border-yellow-700">
+                  <strong class="${projectTextColor} text-lg mb-2 block"><i class="fa-solid fa-laptop-code mr-2"></i> Capstone Projects</strong>
+                  <div class="projects mt-2 space-y-1"></div>
+              </div>
+              
+              <div>
+                  <strong class="text-slate-300 text-lg mb-2 block"><i class="fa-solid fa-book-open-reader mr-2 text-pink-400"></i> Resources</strong>
+                  <div class="resources mt-2 space-y-1"></div>
+              </div>
+          </div>
+        </div>
+      </div>
+    `;
+    
+    const milestoneCardDiv = div.querySelector('.milestone-card');
+    const tasksUl = milestoneCardDiv.querySelector(`#tasks-${index}`);
+    function renderTasks(){
+        const currentCompletedTasks = tasks.filter(t => t.done).length;
+        const currentTotalTasks = tasks.length;
+        const currentProgressPercent = currentTotalTasks > 0 ? Math.round((currentCompletedTasks / currentTotalTasks) * 100) : 0;
+        const currentProgressColor = currentProgressPercent < 30 ? 'bg-rose-500' : currentProgressPercent < 70 ? 'bg-amber-500' : 'bg-emerald-500';
+
+        const progressBarDiv = milestoneCardDiv.querySelector('.w-24 > div');
+        const progressTextSpan = milestoneCardDiv.querySelector('.text-sm.mt-1');
+        progressBarDiv.style.width = `${currentProgressPercent}%`;
+        progressBarDiv.className = `${currentProgressColor} h-3 rounded-full transition-all duration-500`;
+        progressTextSpan.innerText = `${currentProgressPercent}%`;
+
+
+        tasksUl.innerHTML='';
+        tasks.forEach((t,i)=>{
+            const li = document.createElement('li');
+            li.className = 'flex items-center gap-2 bg-slate-800/50 p-2 rounded-lg';
+            
+            const cb = document.createElement('input');
+            cb.type = 'checkbox';
+            cb.className = 'checkbox-tick'; 
+            cb.checked = !!t.done;
+            cb.addEventListener('change', ()=>{ t.done = cb.checked; renderTasks(); });
+            
+            const span = document.createElement('span');
+            span.contentEditable = true;
+            span.innerText = t.title || '';
+            span.className = `text-slate-200 flex-1 px-1 ${t.done ? 'line-through text-slate-500' : 'text-slate-200'}`;
+            span.addEventListener('input', ()=>{ t.title = span.innerText; });
+            
+            const removeBtn = document.createElement('button');
+            removeBtn.className = 'text-rose-400 hover:text-rose-300 px-2 text-sm transition duration-150';
+            removeBtn.innerHTML = '<i class="fa-solid fa-trash"></i>';
+            removeBtn.addEventListener('click', ()=> { tasks.splice(i,1); renderTasks(); });
+            
+            li.appendChild(cb);
+            li.appendChild(span);
+            li.appendChild(removeBtn);
+            tasksUl.appendChild(li);
+        });
+    }
+    renderTasks();
+    milestoneCardDiv.querySelector('.add-task-btn').addEventListener('click', ()=>{
+        const input = milestoneCardDiv.querySelector('.new-task-input');
+        const val = input.value.trim();
+        if(val){ tasks.push({title: val}); input.value=''; renderTasks(); }
+    });
+    const projectsDiv = milestoneCardDiv.querySelector('.projects');
+    (m.projects || []).forEach(p=>{ 
+        const pEl = document.createElement('div'); 
+        pEl.className='text-yellow-300 text-sm font-medium hover:text-yellow-400 transition duration-150'; 
+        pEl.innerHTML = '<i class="fa-solid fa-code-branch mr-2"></i>' + p; 
+        projectsDiv.appendChild(pEl); 
+    });
+    const resourcesDiv = milestoneCardDiv.querySelector('.resources');
+    (m.resources || []).forEach(r=>{ 
+        const rEl = document.createElement('a'); 
+        rEl.href = r.url || '#';
+        rEl.target = '_blank';
+        // FIX: Display URL if title is missing/undefined
+        const linkText = r.title && r.title !== 'undefined' ? r.title : r.url || 'Link'; 
+        rEl.className='text-pink-300 text-sm hover:text-pink-400 transition duration-150 block truncate'; 
+        rEl.innerHTML = `<i class="fa-solid fa-link mr-2"></i> ${linkText}`; 
+        resourcesDiv.appendChild(rEl); 
+    });
+
+
+    div.getRoadmapStruct = () => {
+        return {
+            title: milestoneCardDiv.querySelector('input').value.trim(),
+            description: milestoneCardDiv.querySelector('textarea').value.trim(),
+            tasks: tasks,
+            projects: m.projects || [],
+            resources: m.resources || []
+        };
+    };
+    return div;
+}
+
+function escapeHtml(unsafe) {
+    if(!unsafe) return '';
+    return unsafe.replace(/[&<>"']/g, function(m) { return ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'})[m]; });
+}
 </script>
 </body>
 </html>
