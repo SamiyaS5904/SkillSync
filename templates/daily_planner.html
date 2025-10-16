@@ -1,39 +1,88 @@
-<!-- templates/daily_planner.html -->
 <!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>SkillSync - Daily Planner</title>
+
+<!-- Tailwind + Icons -->
 <script src="https://cdn.tailwindcss.com"></script>
-<style> body { background: linear-gradient(120deg,#071028,#0b1220); color:white; } .card{ background: rgba(17,24,39,0.6); padding:12px; border-radius:10px; }</style>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+
+<style>
+body {
+  background: linear-gradient(135deg, #0f172a 0%, #1e1b4b 50%, #312e81 100%);
+  font-family: 'Inter', sans-serif;
+  color: #e0e7ff;
+}
+.glass {
+  backdrop-filter: blur(12px);
+  background-color: rgba(15, 23, 42, 0.8);
+  border: 1px solid rgba(99, 102, 241, 0.3);
+  border-radius: 1rem;
+}
+</style>
 </head>
 <body>
-<header class="h-16 bg-slate-900/50 border-b border-slate-700 flex items-center px-6 sticky top-0 z-50">
-    <a href="{{ url_for('dashboard') }}" class="text-xl font-extrabold text-indigo-400">SkillSync</a>
+
+<!-- HEADER -->
+<header class="h-16 bg-slate-900/80 border-b border-indigo-700 flex items-center justify-between px-8 sticky top-0 z-50 shadow-lg">
+  <div class="flex items-center gap-3">
+    <a href="{{ url_for('dashboard') }}" class="text-2xl font-extrabold bg-clip-text text-transparent bg-gradient-to-r from-purple-400 via-pink-500 to-fuchsia-500">
+      SkillSync<span class="text-sm opacity-70 ml-1">AI</span>
+    </a>
+  </div>
+  <a href="{{ url_for('logout') }}" class="text-sm text-rose-400 hover:text-rose-300 transition p-2 rounded-lg hover:bg-slate-700/50">
+    <i class="fa-solid fa-right-from-bracket mr-1"></i> Logout
+  </a>
 </header>
 
-<main class="p-8 max-w-4xl mx-auto">
-    <h1 class="text-2xl font-bold">Daily Planner</h1>
-    <p class="text-slate-300">Plan generated from your roadmap. Mark tasks done and Save Progress.</p>
+<!-- MAIN CONTENT -->
+<main class="p-10 max-w-5xl mx-auto space-y-8">
 
-    <div class="mt-6 card">
-        <div class="flex gap-2">
-            <label>Start Date</label>
-            <input id="startDate" type="date" class="px-2 py-1 rounded bg-slate-900/50 border border-slate-700" />
-            <label>Hours/day</label>
-            <input id="hoursPerDay" type="number" min="0.5" step="0.5" value="2" class="w-20 px-2 py-1 rounded bg-slate-900/50 border border-slate-700" />
-            <button id="generatePlanBtn" class="px-3 py-1 bg-indigo-600 rounded">Generate Plan (AI)</button>
-            <button id="savePlanBtn" class="px-3 py-1 bg-emerald-600 rounded">Save Progress</button>
-            <a href="{{ url_for('dashboard') }}" class="px-3 py-1 bg-slate-700 rounded">Back</a>
-        </div>
+  <!-- TITLE -->
+  <section>
+    <h1 class="text-3xl font-extrabold text-white mb-2">
+      <i class="fa-solid fa-calendar-day text-indigo-400 mr-2"></i> Daily Planner
+    </h1>
+    <p class="text-slate-300 text-lg">Plan your learning journey day by day and track your progress.</p>
+  </section>
 
-        <div id="planArea" class="mt-4 space-y-3">
-            {% if plan %}
-                <!-- If server sent an existing plan, show it (server will send plan as JSON context if available) -->
-            {% endif %}
-        </div>
+  <!-- CONTROLS -->
+  <section class="glass p-6 shadow-2xl">
+    <div class="flex flex-wrap gap-4 items-center">
+      <div>
+        <label class="text-sm text-slate-300">Start Date</label>
+        <input id="startDate" type="date" class="px-3 py-2 rounded-lg bg-slate-900/70 border border-slate-700 text-white">
+      </div>
+
+      <div>
+        <label class="text-sm text-slate-300">Hours/day</label>
+        <input id="hoursPerDay" type="number" min="0.5" step="0.5" value="2"
+               class="w-24 px-3 py-2 rounded-lg bg-slate-900/70 border border-slate-700 text-white">
+      </div>
+
+      <div class="flex gap-2 flex-wrap mt-4 md:mt-6">
+        <button id="generatePlanBtn" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 rounded-lg text-white font-semibold shadow">
+          <i class="fa-solid fa-wand-magic-sparkles mr-1"></i> Generate Plan (AI)
+        </button>
+        <button id="savePlanBtn" class="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 rounded-lg text-white font-semibold shadow">
+          <i class="fa-solid fa-floppy-disk mr-1"></i> Save Progress
+        </button>
+        <a href="{{ url_for('dashboard') }}" class="px-4 py-2 bg-slate-700 hover:bg-slate-800 rounded-lg text-white font-semibold shadow">
+          <i class="fa-solid fa-arrow-left mr-1"></i> Back
+        </a>
+      </div>
     </div>
+
+    <!-- PLAN AREA -->
+    <div id="planArea" class="mt-6 space-y-4">
+      {% if plan %}
+      <!-- Rendered dynamically below -->
+      {% endif %}
+    </div>
+  </section>
+
 </main>
 
 <script>
@@ -41,65 +90,78 @@ const EXISTING_PLAN = {{ plan | tojson | default({}) }};
 const ROADMAP = {{ roadmap | tojson | default({}) }};
 
 function renderPlan(plan){
-    const area = document.getElementById('planArea');
-    area.innerHTML = '';
-    if(!plan || !plan.plan || plan.plan.length === 0){
-        area.innerHTML = '<p class="text-slate-300">No plan yet. Use "Generate Plan (AI)".</p>'; return;
-    }
-    plan.plan.forEach((p,i)=>{
-        const div = document.createElement('div');
-        div.className='p-3 bg-slate-900/50 rounded';
-        div.innerHTML = `<div class="flex justify-between"><div><strong>${p.date} ${p.time || ''}</strong> - ${p.title} (${p.duration || p.duration_minutes || p.duration_minutes || 'min'})</div><div><input type="checkbox" class="task-checkbox" data-i="${i}" ${p.done ? 'checked' : ''}></div></div>
-                         <div class="text-slate-300">${p.notes || ''} ${p.resource ? `<a class="text-indigo-300" href="${p.resource}" target="_blank">Resource</a>` : ''}</div>`;
-        area.appendChild(div);
+  const area = document.getElementById('planArea');
+  area.innerHTML = '';
+  if(!plan || !plan.plan || plan.plan.length === 0){
+    area.innerHTML = '<p class="text-slate-300 italic">No plan yet. Click "Generate Plan (AI)".</p>'; 
+    return;
+  }
+
+  plan.plan.forEach((p,i)=>{
+    const div = document.createElement('div');
+    div.className='glass p-4';
+    div.innerHTML = `
+      <div class="flex justify-between items-center mb-1">
+        <div>
+          <span class="font-semibold text-indigo-300">${p.date}</span> 
+          - <span class="text-white">${p.title}</span> 
+          <span class="text-slate-400 text-sm">(${p.duration || p.duration_minutes || 'N/A'} mins)</span>
+        </div>
+        <input type="checkbox" class="task-checkbox accent-indigo-500 scale-125" data-i="${i}" ${p.done ? 'checked' : ''}>
+      </div>
+      <p class="text-slate-300 ml-1">${p.notes || ''} 
+        ${p.resource ? `<a href="${p.resource}" target="_blank" class="text-indigo-400 hover:text-indigo-300 ml-2">Resource ↗</a>` : ''}
+      </p>
+    `;
+    area.appendChild(div);
+  });
+
+  // checkbox listeners
+  area.querySelectorAll('.task-checkbox').forEach(cb=>{
+    cb.addEventListener('change', ()=>{
+      const idx = parseInt(cb.dataset.i);
+      EXISTING_PLAN.plan[idx].done = cb.checked;
     });
-    // checkbox listeners
-    area.querySelectorAll('.task-checkbox').forEach(cb=>{
-        cb.addEventListener('change', ()=>{
-            const idx = parseInt(cb.dataset.i);
-            EXISTING_PLAN.plan[idx].done = cb.checked;
-        });
-    });
+  });
 }
 
 if(Object.keys(EXISTING_PLAN||{}).length > 0){
-    renderPlan(EXISTING_PLAN);
+  renderPlan(EXISTING_PLAN);
 }
 
 document.getElementById('generatePlanBtn').addEventListener('click', async ()=>{
-    const startDate = document.getElementById('startDate').value || new Date().toISOString().slice(0,10);
-    const hours = parseFloat(document.getElementById('hoursPerDay').value) || 2;
-    try {
-        const resp = await fetch('/daily_planner', {
-            method:'POST',
-            headers:{'Content-Type':'application/json'},
-            body: JSON.stringify({action:'generate', start_date: startDate, hours})
-        });
-        const data = await resp.json();
-        if(data.error){ alert('AI Error: '+data.error); return; }
-        // save plan locally for edits
-        window.currentPlan = data.plan;
-        renderPlan(data.plan);
-    } catch(e){
-        alert('Network error: ' + e);
-    }
+  const startDate = document.getElementById('startDate').value || new Date().toISOString().slice(0,10);
+  const hours = parseFloat(document.getElementById('hoursPerDay').value) || 2;
+  try {
+    const resp = await fetch('/daily_planner', {
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({action:'generate', start_date: startDate, hours})
+    });
+    const data = await resp.json();
+    if(data.error){ alert('AI Error: '+data.error); return; }
+    window.currentPlan = data.plan;
+    renderPlan(data.plan);
+  } catch(e){
+    alert('Network error: ' + e);
+  }
 });
 
 document.getElementById('savePlanBtn').addEventListener('click', async ()=>{
-    const plan = window.currentPlan || EXISTING_PLAN;
-    if(!plan || !plan.plan) { alert('No plan to save'); return; }
-    try {
-        const resp = await fetch('/daily_planner', {
-            method:'POST',
-            headers:{'Content-Type':'application/json'},
-            body: JSON.stringify({action:'save', plan})
-        });
-        const data = await resp.json();
-        if(data.success){ alert('Plan saved'); }
-        else alert('Save failed: '+(data.error||'unknown'));
-    } catch(e){
-        alert('Network error: ' + e);
-    }
+  const plan = window.currentPlan || EXISTING_PLAN;
+  if(!plan || !plan.plan) { alert('No plan to save'); return; }
+  try {
+    const resp = await fetch('/daily_planner', {
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({action:'save', plan})
+    });
+    const data = await resp.json();
+    if(data.success){ alert('✅ Plan saved successfully!'); }
+    else alert('Save failed: '+(data.error||'unknown'));
+  } catch(e){
+    alert('Network error: ' + e);
+  }
 });
 </script>
 </body>

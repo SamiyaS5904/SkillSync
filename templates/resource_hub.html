@@ -1,0 +1,328 @@
+import os
+import json
+import re
+from datetime import datetime, timezone
+from functools import wraps
+from dotenv import load_dotenv
+from flask import Flask, render_template, request, redirect, url_for, session, jsonify, flash
+from werkzeug.security import generate_password_hash, check_password_hash
+from pymongo import MongoClient
+from openai import OpenAI
+
+# ------------------ Setup ------------------
+load_dotenv()
+
+MONGO_URI = os.getenv("MONGO_URI")
+OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
+OPENAI_MODEL = os.getenv("OPENAI_MODEL", "gpt-4o-mini")
+SECRET_KEY = os.getenv("SECRET_KEY", "super_secret_key")
+
+if not MONGO_URI:
+    raise EnvironmentError("Please set MONGO_URI in .env")
+if not OPENAI_API_KEY:
+    print("⚠️ Warning: OPENAI_API_KEY not set. AI calls will fail until you set it.")
+
+client = OpenAI(api_key=OPENAI_API_KEY)
+app = Flask(__name__)
+app.secret_key = SECRET_KEY
+
+# MongoDB setup
+mongo_client = MongoClient(MONGO_URI)
+db = mongo_client["SkillSyncDB"]
+users_col = db["users"]
+roadmaps_col = db["roadmaps"]
+dailyplans_col = db["daily_plans"]
+
+# ------------------ Predefined Goals ------------------
+PREDEFINED_GOALS = [
+    "Data Scientist", "AI Engineer", "Data Analyst", "Machine Learning Engineer",
+    "Data Engineer", "Frontend Developer", "Backend Developer", "Fullstack Developer",
+    "DevOps Engineer", "Product Analyst", "UX Designer"
+]
+
+# ------------------ Helpers ------------------
+def login_required(f):
+    @wraps(f)
+    def wrapper(*args, **kwargs):
+        if "user" not in session:
+            return redirect(url_for("index"))
+        return f(*args, **kwargs)
+    return wrapper
+
+def safe_json_loads(s):
+    """Safely try to parse a JSON-like response from AI."""
+    if s is None:
+        return None
+    if isinstance(s, dict):
+        return s
+    try:
+        return json.loads(s)
+    except Exception:
+        m = re.search(r"(\{.*\}|\[.*\])", str(s), re.S)
+        if m:
+            try:
+                return json.loads(m.group(1))
+            except Exception:
+                return None
+        return None
+
+def calculate_progress(roadmap):
+    if not roadmap or "milestones" not in roadmap:
+        return 0
+    total = done = 0
+    for m in roadmap.get("milestones", []):
+        tasks = m.get("tasks", [])
+        total += len(tasks)
+        done += sum(1 for t in tasks if t.get("done"))
+    return int((done / total) * 100) if total else 0
+
+# ------------------ Filtering ------------------
+def filter_roadmap_based_on_skills(roadmap, existing_skills):
+    """Remove or shorten tasks already covered by user's existing skills."""
+    if not roadmap or "milestones" not in roadmap:
+        return roadmap
+
+    skill_names = []
+    for s in existing_skills:
+        if isinstance(s, dict) and "name" in s:
+            skill_names.append(s["name"].lower())
+        elif isinstance(s, str):
+            skill_names.append(s.lower())
+
+    filtered = {"goal": roadmap.get("goal", ""), "milestones": []}
+    for milestone in roadmap.get("milestones", []):
+        new_tasks = []
+        for t in milestone.get("tasks", []):
+            title = t.get("title", "").lower()
+            if any(name in title for name in skill_names):
+                continue
+            new_tasks.append(t)
+        if new_tasks:
+            milestone["tasks"] = new_tasks
+            filtered["milestones"].append(milestone)
+
+    for k in ["weekly_goals", "timeline_overview"]:
+        if k in roadmap:
+            filtered[k] = roadmap[k]
+
+    return filtered
+
+# ------------------ OpenAI Roadmap Generation ------------------
+def call_openai_generate_roadmap(goal, skills, hours_per_day=2, months=3):
+    """Generate a structured, week-by-week learning roadmap."""
+    system_prompt = (
+        "You are a 2025 AI Career Coach that creates highly practical, week-by-week learning roadmaps.\n"
+        "Each roadmap must be structured as JSON and include weeks, topics, tasks, resources, and mini-projects.\n"
+        "Avoid repeating skills the user already knows. Ensure tasks are progressive and achievable.\n"
+        "Output only valid JSON — no Markdown code blocks."
+    )
+
+    user_prompt = (
+        f"Goal: {goal}\n"
+        f"Existing Skills: {skills}\n"
+        f"Hours per day: {hours_per_day}\n"
+        f"Duration: {months} months\n"
+        "Now generate the roadmap."
+    )
+
+    try:
+        print(f"🧠 Generating roadmap for goal: {goal} ...")
+        resp = client.chat.completions.create(
+            model=OPENAI_MODEL,
+            messages=[
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": user_prompt},
+            ],
+            max_tokens=1800,
+            temperature=0.3
+        )
+        text = resp.choices[0].message.content
+        print("✅ Raw AI response received.")
+        data = safe_json_loads(text)
+
+        if not data:
+            text2 = re.sub(r"^```json|```$", "", text.strip(), flags=re.I)
+            data = safe_json_loads(text2)
+        if not data:
+            print("❌ Failed to parse AI output:", text)
+            raise ValueError("AI returned unparsable roadmap JSON.")
+
+        print("✅ Roadmap parsed successfully.")
+        return filter_roadmap_based_on_skills(data, skills)
+
+    except Exception as e:
+        print("❌ AI generation failed:", e)
+        raise RuntimeError(f"AI generation failed: {e}")
+
+# ------------------ Daily Plan ------------------
+def call_openai_daily_plan(roadmap, start_date=None, hours_per_day=2):
+    """Generate a 7-day daily learning plan."""
+    system = "You are a planner AI that creates 7-day detailed daily study plans based on a roadmap JSON. Output only JSON."
+    start_date = start_date or datetime.now(timezone.utc).date().isoformat()
+    user_prompt = f"Start date: {start_date}\nHours/day: {hours_per_day}\nRoadmap: {json.dumps(roadmap)}"
+
+    try:
+        resp = client.chat.completions.create(
+            model=OPENAI_MODEL,
+            messages=[{"role": "system", "content": system}, {"role": "user", "content": user_prompt}],
+            max_tokens=1400,
+            temperature=0.2
+        )
+        text = resp.choices[0].message.content
+        data = safe_json_loads(text)
+        if not data:
+            text2 = re.sub(r"^```json|```$", "", text.strip(), flags=re.I)
+            data = safe_json_loads(text2)
+        return data
+    except Exception as e:
+        raise RuntimeError(f"AI daily plan failed: {e}")
+
+# ------------------ Routes ------------------
+@app.route("/")
+def index():
+    return render_template("index_3.html")
+
+@app.route("/signup", methods=["POST"])
+def signup():
+    name = request.form.get("name")
+    email = request.form.get("email")
+    password = request.form.get("password")
+    confirm = request.form.get("confirm_password")
+
+    if not all([name, email, password, confirm]) or password != confirm:
+        flash("Invalid signup form", "error")
+        return redirect(url_for("index"))
+
+    if users_col.find_one({"email": email}):
+        flash("User already exists.", "error")
+        return redirect(url_for("index"))
+
+    hashed = generate_password_hash(password)
+    users_col.insert_one({
+        "name": name,
+        "email": email,
+        "password": hashed,
+        "created_at": datetime.now(timezone.utc),
+        "goal": None,
+        "skills": [],
+        "roadmap": None,
+        "daily_plans": [],
+        "is_admin": False
+    })
+    flash("Signup successful! Please login.", "success")
+    return redirect(url_for("index"))
+
+@app.route("/login", methods=["POST"])
+def login():
+    email = request.form.get("email")
+    password = request.form.get("password")
+    user = users_col.find_one({"email": email})
+
+    if user and check_password_hash(user["password"], password):
+        session["user"] = user["email"]
+        return redirect(url_for("dashboard"))
+    flash("Invalid credentials.", "error")
+    return redirect(url_for("index"))
+
+@app.route("/logout")
+def logout():
+    session.pop("user", None)
+    return redirect(url_for("index"))
+
+@app.route("/dashboard")
+@login_required
+def dashboard():
+    user = users_col.find_one({"email": session["user"]})
+    roadmap = user.get("roadmap") or {"goal": user.get("goal", ""), "weeks": []}
+    skills = user.get("skills") or []
+    progress = calculate_progress(roadmap)
+    return render_template("dashboard.html", user=user, roadmap=roadmap, skills=skills,
+                           predefined_goals=PREDEFINED_GOALS, overall_progress=progress)
+
+@app.route("/generate_roadmap", methods=["POST"])
+@login_required
+def generate_roadmap():
+    data = request.get_json(force=True)
+    goal = data.get("goal")
+    skills = data.get("skills", [])
+    hours = int(data.get("hours", 2))
+    months = int(data.get("duration_months", 3))
+
+    if not goal:
+        return jsonify({"error": "Goal required"}), 400
+
+    cleaned_skills = [s["name"] if isinstance(s, dict) and "name" in s else s for s in skills]
+
+    try:
+        roadmap = call_openai_generate_roadmap(goal, cleaned_skills, hours, months)
+        users_col.update_one({"email": session["user"]},
+                             {"$set": {"goal": goal, "skills": skills, "roadmap": roadmap}})
+        roadmaps_col.insert_one({
+            "email": session["user"],
+            "roadmap": roadmap,
+            "created_at": datetime.now(timezone.utc)
+        })
+        return jsonify({"success": True, "roadmap": roadmap})
+    except Exception as e:
+        print("❌ Error generating roadmap:", e)
+        return jsonify({"error": str(e)}), 500
+
+@app.route("/daily_planner", methods=["GET", "POST"])
+@login_required
+def daily_planner():
+    user = users_col.find_one({"email": session["user"]})
+    if request.method == "GET":
+        record = dailyplans_col.find_one({"email": session["user"]})
+        plan = record.get("plan") if record else None
+        return render_template("daily_planner.html", user=user, plan=plan or {}, roadmap=user.get("roadmap") or {})
+
+    data = request.get_json(force=True)
+    if data.get("action") == "generate":
+        roadmap = user.get("roadmap") or {}
+        start_date = data.get("start_date") or datetime.now(timezone.utc).date().isoformat()
+        hours = int(data.get("hours", 2))
+        try:
+            plan = call_openai_daily_plan(roadmap, start_date, hours)
+            dailyplans_col.update_one({"email": session["user"]},
+                                      {"$set": {"plan": plan, "created_at": datetime.now(timezone.utc)}}, upsert=True)
+            return jsonify({"success": True, "plan": plan})
+        except Exception as e:
+            print("❌ Daily plan generation failed:", e)
+            return jsonify({"error": str(e)}), 500
+    elif data.get("action") == "save":
+        plan = data.get("plan")
+        dailyplans_col.update_one({"email": session["user"]},
+                                  {"$set": {"plan": plan, "updated_at": datetime.now(timezone.utc)}}, upsert=True)
+        return jsonify({"success": True})
+    return jsonify({"error": "Invalid action"}), 400
+
+# ------------------ Resource Hub ------------------
+@app.route("/resource_hub")
+@login_required
+def resource_hub():
+    user = users_col.find_one({"email": session["user"]})
+    return render_template("resource_hub.html", user=user)
+
+@app.route("/update_task_status", methods=["POST"])
+@login_required
+def update_task_status():
+    data = request.get_json(force=True)
+    week_idx = int(data.get("weekIdx"))
+    task_idx = int(data.get("taskIdx"))
+    done = bool(data.get("done"))
+
+    user = users_col.find_one({"email": session["user"]})
+    roadmap = user.get("roadmap")
+
+    try:
+        roadmap["weeks"][week_idx]["tasks"][task_idx]["done"] = done
+        progress = calculate_progress({"milestones": [w for w in roadmap.get("weeks", [])]})
+        users_col.update_one({"email": session["user"]}, {"$set": {"roadmap": roadmap}})
+        return jsonify({"success": True, "progress": progress})
+    except Exception as e:
+        print("❌ Task update failed:", e)
+        return jsonify({"error": str(e)}), 500
+
+# ------------------ Run ------------------
+if __name__ == "__main__":
+    app.run(debug=True, port=5000)
